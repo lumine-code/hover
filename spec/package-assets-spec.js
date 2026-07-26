@@ -58,8 +58,10 @@ describe("hover package assets", () => {
 
   it("consumes hover and signature and provides no legacy services", () => {
     const pkg = JSON.parse(read("package.json"));
-    expect(pkg.consumedServices["hover"].versions["^1.0.0"]).toBe("consumeHover");
-    expect(pkg.consumedServices["signature"].versions["^1.0.0"]).toBe("consumeSignature");
+    expect(pkg.consumedServices["hover.provider"].versions["^1.0.0"]).toBe("consumeHover");
+    expect(pkg.consumedServices["hover.signature-provider"].versions["^1.0.0"]).toBe(
+      "consumeHoverSignature",
+    );
     expect(pkg.providedServices).toBeUndefined();
   });
 

@@ -27,14 +27,14 @@
     "format:check": "prettier --check ."
   },
   "consumedServices": {
-    "hover": {
+    "hover.provider": {
       "versions": {
         "^1.0.0": "consumeHover"
       }
     },
-    "signature": {
+    "hover.signature-provider": {
       "versions": {
-        "^1.0.0": "consumeSignature"
+        "^1.0.0": "consumeHoverSignature"
       }
     }
   },

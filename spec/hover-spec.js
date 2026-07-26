@@ -97,7 +97,7 @@ describe("hover", () => {
       },
       getSignature,
     };
-    disposables.add(mainModule.consumeSignature(provider));
+    disposables.add(mainModule.consumeHoverSignature(provider));
     return provider;
   }
 
