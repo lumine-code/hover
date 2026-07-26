@@ -40,8 +40,8 @@ The overlay appearance can be tweaked from your `styles.less`:
 
 ## Services
 
-- **hover.provider** (`^1.0.0`): consumed to request documentation for a buffer position from providers such as IDE backend packages.
-- **hover.signature-provider** (`^1.0.0`): consumed to request signature help while typing function arguments.
+- **[hover.provider](docs/hover.provider.md)** (`^1.0.0`): consumed to request documentation for a buffer position from providers such as IDE backend packages.
+- **[hover.signature-provider](docs/hover.signature-provider.md)** (`^1.0.0`): consumed to request signature help while typing function arguments.
 
 ## Contributing
 
