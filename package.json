@@ -1,0 +1,82 @@
+{
+  "name": "hover",
+  "author": "lumine-code",
+  "description": "Show documentation tooltips and signature help at the cursor.",
+  "repository": "https://github.com/lumine-code/hover",
+  "bugs": {
+    "url": "https://github.com/lumine-code/hover/issues"
+  },
+  "keywords": [
+    "tooltip",
+    "documentation",
+    "signature-help",
+    "datatip",
+    "quick-info",
+    "lsp"
+  ],
+  "version": "1.0.0",
+  "license": "MIT",
+  "engines": {
+    "atom": ">=1.100.0 <2.0.0"
+  },
+  "main": "./lib/main",
+  "scripts": {
+    "test": "cd ../lumine && npm run test:only -- ../hover/spec",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "consumedServices": {
+    "hover": {
+      "versions": {
+        "^1.0.0": "consumeHover"
+      }
+    },
+    "signature": {
+      "versions": {
+        "^1.0.0": "consumeSignature"
+      }
+    }
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-n": "^18.2.2",
+    "globals": "^17.7.0",
+    "prettier": "^3.9.6"
+  },
+  "configSchema": {
+    "showOnMouseMove": {
+      "title": "Show On Mouse Move",
+      "description": "Show the hover tooltip when the mouse pointer rests on a symbol.",
+      "type": "boolean",
+      "default": true
+    },
+    "showOnCursorMove": {
+      "title": "Show On Cursor Move",
+      "description": "Show the hover tooltip when the cursor rests on a symbol. When disabled, the tooltip appears only via the `hover:toggle` command.",
+      "type": "boolean",
+      "default": false
+    },
+    "hoverTime": {
+      "title": "Hover Delay Time",
+      "description": "How long (in milliseconds) the mouse pointer or the cursor must rest before the hover tooltip is requested.",
+      "type": "number",
+      "minimum": 0,
+      "default": 250
+    },
+    "showSignatureWhileTyping": {
+      "title": "Show Signature Help While Typing",
+      "description": "Show the signature help overlay automatically when a trigger character is typed, and keep it updated while typing function arguments.",
+      "type": "boolean",
+      "default": true
+    },
+    "includeSignatureDocumentation": {
+      "title": "Include Signature Documentation",
+      "description": "Include the documentation of the whole signature in the signature help overlay, below the documentation of the active parameter.",
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

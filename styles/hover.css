@@ -1,0 +1,59 @@
+/* Hover tooltip and signature help overlays. The overlay item is an
+   `atom-panel.hover-overlay-view-container` holding a padded
+   `.hover-overlay-view` panel, mounted as an overlay decoration. */
+
+.hover-overlay-view-container {
+  overflow: auto;
+  max-height: 300px;
+  max-width: min(var(--text-editor-width, 50vw), 50vw);
+}
+
+.hover-overlay-view {
+  font-family: var(--font-family);
+}
+
+.hover-overlay-view > :first-child {
+  margin-top: 0;
+}
+
+.hover-overlay-view > :last-child {
+  margin-bottom: 0;
+}
+
+.hover-overlay-view pre {
+  position: relative;
+  color: var(--syntax-text-color);
+  background-color: var(--syntax-background-color);
+  /* Never break lines in the middle of a word. */
+  word-break: normal;
+}
+
+.hover-overlay-view pre + * {
+  margin-top: 0.5rem;
+}
+
+/* Read-only editors standing in for fenced code blocks. */
+.hover-overlay-view atom-text-editor {
+  margin: 0 0 0.5rem;
+  border-radius: 3px;
+}
+
+.hover-overlay-view atom-text-editor:last-child {
+  margin-bottom: 0;
+}
+
+/* Plain-text hover contents keep their line breaks. */
+.hover-overlay-view .hover-plaintext {
+  white-space: pre-wrap;
+}
+
+/* The active parameter within the signature label. */
+.hover-overlay-view .hover-active-parameter {
+  background-color: color-mix(in srgb, var(--syntax-text-color) 18%, transparent);
+  border-radius: 2px;
+}
+
+/* The buffer range the hover information refers to. */
+atom-text-editor .highlight.hover-highlight-region .region {
+  background-color: color-mix(in srgb, var(--syntax-text-color) 8%, transparent);
+}
