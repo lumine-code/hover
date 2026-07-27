@@ -9,7 +9,7 @@ Supplies the documentation shown when the pointer rests on a symbol.
 | Consumed by | `consumeHover(provider)` returning a `Disposable` |
 | Owner       | [`hover`](https://github.com/lumine-code/hover)   |
 
-If your source of documentation is a language server, register an adapter with [`ide-client`](https://lumine-code.github.io/docs.html#services/ide-client) instead — it already provides this service on every adapter's behalf. Implement this directly only for a source that is not LSP.
+If your source of documentation is a language server, register an adapter with `ide-client` instead — it already provides this service on every adapter's behalf. Implement this directly only for a source that is not LSP.
 
 ## Registration
 

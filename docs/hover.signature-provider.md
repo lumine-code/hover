@@ -9,7 +9,7 @@ Supplies the call signature shown while the user types arguments.
 | Consumed by | `consumeHoverSignature(provider)` returning a `Disposable` |
 | Owner       | [`hover`](https://github.com/lumine-code/hover)            |
 
-The sibling of [`hover.provider`](hover.provider.md), triggered by typing rather than by pointing. As with hover, a language server reaches this through an [`ide-client`](https://lumine-code.github.io/docs.html#services/ide-client) adapter rather than by implementing the service directly.
+The sibling of [`hover.provider`](hover.provider.md), triggered by typing rather than by pointing. As with hover, a language server reaches this through an `ide-client` adapter rather than by implementing the service directly.
 
 ## Registration
 
