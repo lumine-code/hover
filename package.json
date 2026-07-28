@@ -19,6 +19,10 @@
   "engines": {
     "atom": ">=1.100.0 <2.0.0"
   },
+  "backgroundTips": [
+    "You can read the documentation of the symbol under the cursor with {{ 'hover:toggle' | keystroke }}",
+    "You can see the signature of the call you are inside with {{ 'hover:toggle-signature-help' | keystroke }}"
+  ],
   "main": "./lib/main",
   "scripts": {
     "test": "lumine --test spec",
