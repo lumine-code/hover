@@ -8,7 +8,7 @@ const exists = (rel) => fs.existsSync(path.join(root, rel));
 // Guards for the pulsar-hover -> hover rebrand and the TypeScript/Rollup/Less
 // -> plain CommonJS/CSS modernization. The command prefix, config namespace,
 // and package name all move to `hover`; markdown rendering moves to the
-// built-in `atom.ui.markdown` API, and the legacy atom-ide back-compat
+// built-in `atom.tools.markdown` API, and the legacy atom-ide back-compat
 // services are dropped.
 describe("hover package assets", () => {
   it("ships the keymap as JSON, not CSON", () => {
