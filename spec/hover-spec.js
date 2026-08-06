@@ -482,6 +482,36 @@ describe("hover", () => {
       expect(overlayDecorations(editor).length).toBe(0);
     });
 
+    it("stacks what every provider has to say, the highest priority first", async () => {
+      // A word can be both wrong and worth explaining. Priority decides the
+      // order of the sections, not which of them is heard.
+      const documentation = addHoverProvider(async () => ({
+        range: [
+          [0, 0],
+          [0, 3],
+        ],
+        contents: { kind: "markdown", value: "Adds two numbers." },
+      }));
+      documentation.priority = 2;
+      const diagnostic = addHoverProvider(async () => ({
+        range: [
+          [0, 0],
+          [0, 3],
+        ],
+        contents: { kind: "markdown", value: "unused variable" },
+      }));
+      diagnostic.priority = 100;
+
+      editor.setCursorBufferPosition([0, 1]);
+      atom.commands.dispatch(editorView, "hover:toggle");
+      await microtasks();
+
+      const sections = overlayItem(editor).querySelectorAll(".hover-section");
+      expect(sections.length).toBe(2);
+      expect(sections[0].textContent).toContain("unused variable");
+      expect(sections[1].textContent).toContain("Adds two numbers.");
+    });
+
     it("mounts an element a provider built for itself", async () => {
       // Not every answer is prose: a linter message carries a severity and a
       // rule name that markdown would flatten into text.
@@ -495,8 +525,8 @@ describe("hover", () => {
 
       const item = overlayItem(editor);
       expect(item.querySelector(".provider-built")).toBe(built);
-      // The popover drops its prose padding for content that lays out its own.
-      expect(item.querySelector(".hover-overlay-view").classList).toContain("hover-provided");
+      // The popover drops its prose padding for a section that lays out its own.
+      expect(item.querySelector(".hover-section").classList).toContain("hover-provided");
     });
 
     it("asks about the row when the pointer rests on the gutter", async () => {

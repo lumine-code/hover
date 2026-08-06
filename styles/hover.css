@@ -68,16 +68,25 @@ atom-overlay[data-overlay-position="above"] {
   /* Its own scrolling has to round off with the box it scrolls inside, or
      content shows through the corners the border draws around. */
   border-radius: inherit;
-  padding: calc(var(--component-padding) / 2) var(--component-padding);
   font-family: var(--font-family);
-  font-size: var(--font-size);
-  line-height: 1.5;
+  font-size: var(--prose-font-size);
+  line-height: var(--prose-line-height);
   color: var(--text-color);
+}
+
+/* Every answer given about the position gets a section, in the order they were
+   asked, told apart by a hairline. */
+.hover-section {
+  padding: calc(var(--component-padding) / 2) var(--component-padding);
+}
+
+.hover-section + .hover-section {
+  border-top: 1px solid var(--overlay-border-color);
 }
 
 /* A provider that builds its own content sets its own insets: rows that run to
    the edge of the popover cannot do that inside the prose padding. */
-.hover-overlay-view.hover-provided {
+.hover-section.hover-provided {
   padding: 0;
 }
 
@@ -89,11 +98,11 @@ atom-overlay[data-overlay-position="above"] {
   user-select: text;
 }
 
-.hover-overlay-view > :first-child {
+.hover-section > :first-child {
   margin-top: 0;
 }
 
-.hover-overlay-view > :last-child {
+.hover-section > :last-child {
   margin-bottom: 0;
 }
 

@@ -7,6 +7,7 @@ Hover information and signature help come from provider packages — typically l
 ## Features
 
 - **Hover tooltips**: shows documentation for the symbol under the mouse pointer or the cursor.
+- **Every source at once**: stacks what each provider has to say about the position, most important first — a linter message above the documentation, not instead of it.
 - **Signature help**: displays the active function signature with the current parameter highlighted while typing arguments.
 - **Markdown rendering**: renders provider documentation as sanitized markdown with syntax-highlighted code blocks.
 - **Gutter hovers**: answers for a whole line when the pointer rests on the gutter, for sources such as linter messages.

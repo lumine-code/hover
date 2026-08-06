@@ -41,12 +41,12 @@ type Hover = {
 };
 ```
 
-| Member                     | Description                                                                                 |
-| -------------------------- | ------------------------------------------------------------------------------------------- |
-| `hover(editor, position)`  | Required. Return the documentation, or `null` to decline.                                   |
-| `hoverGutter(editor, row)` | Optional. Answer for a whole row when the pointer rests on the gutter. See Gutter hovers.   |
-| `grammarScopes`            | Scope names you serve. **Omitting it means every grammar.** May be a getter — see Behavior. |
-| `priority`                 | Higher is asked first. Defaults to `0`; `ide-client` uses `2`, `linter` uses `100`.         |
+| Member                     | Description                                                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `hover(editor, position)`  | Required. Return the documentation, or `null` to decline.                                                          |
+| `hoverGutter(editor, row)` | Optional. Answer for a whole row when the pointer rests on the gutter. See Gutter hovers.                          |
+| `grammarScopes`            | Scope names you serve. **Omitting it means every grammar.** May be a getter — see Behavior.                        |
+| `priority`                 | Higher is asked first and sits higher in the tooltip. Defaults to `0`; `ide-client` uses `2`, `linter` uses `100`. |
 
 The result must carry either `contents.value` or `contents.element` — neither means declining. `range` is what the overlay highlights and what it uses to decide whether the pointer has moved out of the answer.
 
@@ -82,11 +82,11 @@ module.exports = {
 
 ## Behavior
 
-Providers are sorted by descending `priority` and asked in turn; **the first non-empty answer wins** and the rest are not consulted. Declining is normal — return `null` rather than an empty string.
+Providers are sorted by descending `priority` and asked in turn, and **every non-empty answer is shown**, stacked in that order and separated by a rule. A word can be both wrong and worth explaining: the linter's message goes above the language server's documentation because it outranks it, not instead of it. Priority orders the sections; it does not silence anyone. Declining is normal — return `null` rather than an empty string.
 
 `grammarScopes` is **read through on every call, never snapshotted**. That is deliberate: a hub provider exposes it as a getter whose value changes as language server sessions come and go. A plain array is fine for a fixed set of grammars, but do not assume the registry cached it.
 
-Two guards protect against stale answers, and both use `range`. An answer whose `range` does not contain the position that was asked about is discarded — the pointer has moved on. And if an overlay is already showing for an intersecting range, nothing is re-rendered. Returning an accurate `range` is therefore what makes hovering feel stable; omitting it makes the overlay flicker.
+Two guards protect against stale answers, and both use `range`. An answer whose `range` does not contain the position that was asked about is dropped — the pointer has moved on. And if an overlay is already showing for an intersecting range, nothing is re-rendered. The tooltip watches the narrowest span its answers agree on, so returning an accurate `range` is what makes hovering feel stable; omitting it makes the overlay flicker.
 
 A provider that throws unmounts the overlay and logs to the console; it does not break the others, but it does end that hover.
 
