@@ -27,9 +27,9 @@ Commands available in `atom-text-editor`:
 
 ## Customization
 
-The overlay appearance can be tweaked from your `styles.less`:
+The overlay appearance can be tweaked from your `styles.css`:
 
-```less
+```css
 .hover-overlay-view-container {
   max-height: 500px;
   .hover-active-parameter {
