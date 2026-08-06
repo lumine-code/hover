@@ -237,6 +237,9 @@ describe("hover", () => {
         atom.config.set("hover.hideDelay", Math.round(showDelay / 5));
         hideDelay = atom.config.get("hover.hideDelay");
 
+        // Enough rows below the hovered word for the buffer to scroll.
+        editor.setText(`add\n${"second line\n".repeat(40)}`);
+
         addHoverProvider(async () => ({
           range: [
             [0, 0],
@@ -274,6 +277,21 @@ describe("hover", () => {
         advanceClock(hideDelay * 2);
         await microtasks();
         expect(overlayDecorations(editor).length).toBe(1);
+      });
+
+      it("retires the tooltip when the text scrolls out from under a still pointer", () => {
+        // No pointer event at all: the range moves, the pointer does not, and
+        // nothing would ask the question if the scroll did not.
+        const component = editorView.getComponent();
+        editorView.style.height = "40px";
+        component.measureDimensions();
+        component.updateSync();
+        editorView.setScrollTop(component.getLineHeight() * 3);
+        component.updateSync();
+        expect(editorView.getScrollTop()).toBeGreaterThan(0);
+
+        advanceClock(hideDelay);
+        expect(overlayDecorations(editor).length).toBe(0);
       });
 
       it("keeps the tooltip while the pointer is over it", () => {
