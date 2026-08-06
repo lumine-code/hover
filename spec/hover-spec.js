@@ -352,6 +352,24 @@ describe("hover", () => {
         expect(overlayDecorations(editor).length).toBe(0);
       });
 
+      it("retires the tooltip the moment a key is pressed", () => {
+        // Reaching for a modifier is not a keystroke yet, and a chord may be
+        // for the tooltip itself — the copy that takes what is selected in it.
+        editorView.dispatchEvent(new KeyboardEvent("keydown", { key: "Control", bubbles: true }));
+        editorView.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "c", ctrlKey: true, bubbles: true }),
+        );
+        expect(overlayDecorations(editor).length).toBe(1);
+
+        // Anything else, and the reader has gone back to work. No delay: the
+        // cursor moving used to be noticed a show delay later and acted on a
+        // hide delay after that.
+        editorView.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
+        );
+        expect(overlayDecorations(editor).length).toBe(0);
+      });
+
       it("retires the tooltip the moment a click lands outside it", () => {
         overlayItem(editor).dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
         expect(overlayDecorations(editor).length).toBe(1);
