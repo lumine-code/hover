@@ -69,8 +69,9 @@ describe("hover package assets", () => {
     const pkg = JSON.parse(read("package.json"));
     const schema = pkg.configSchema;
     expect(Object.keys(schema).sort()).toEqual([
-      "hoverTime",
+      "hideDelay",
       "includeSignatureDocumentation",
+      "showDelay",
       "showOnCursorMove",
       "showOnMouseMove",
       "showSignatureWhileTyping",

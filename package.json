@@ -70,9 +70,16 @@
       "type": "boolean",
       "default": false
     },
-    "hoverTime": {
-      "title": "Hover Delay Time",
+    "showDelay": {
+      "title": "Show Delay",
       "description": "How long (in milliseconds) the mouse pointer or the cursor must rest before the hover tooltip is requested.",
+      "type": "number",
+      "minimum": 0,
+      "default": 250
+    },
+    "hideDelay": {
+      "title": "Hide Delay",
+      "description": "How long (in milliseconds) the mouse pointer must be away from the hovered symbol before the tooltip is dismissed. Time spent over the tooltip itself does not count.",
       "type": "number",
       "minimum": 0,
       "default": 250

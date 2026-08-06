@@ -37,7 +37,8 @@ describe("hover", () => {
   let editor;
   let editorView;
   let disposables;
-  let hoverTime;
+  let showDelay;
+  let hideDelay;
 
   beforeEach(async () => {
     jasmine.attachToDOM(atom.views.getView(atom.workspace));
@@ -45,7 +46,8 @@ describe("hover", () => {
 
     const pack = await atom.packages.activatePackage(packageRoot);
     mainModule = pack.mainModule;
-    hoverTime = atom.config.get("hover.hoverTime");
+    showDelay = atom.config.get("hover.showDelay");
+    hideDelay = atom.config.get("hover.hideDelay");
 
     editor = await atom.workspace.open();
     editor.setText("add\nsecond line\n");
@@ -99,6 +101,31 @@ describe("hover", () => {
     };
     disposables.add(mainModule.consumeHoverSignature(provider));
     return provider;
+  }
+
+  // Where a buffer position sits in the editor's content coordinates. The
+  // pointer moves below stay on the first row: the component clamps a mouse
+  // event to its scroll container, and a spec editor is short.
+  function pixelFor(bufferPosition) {
+    const component = editorView.getComponent();
+    component.updateSync();
+    const { left, top } = component.pixelPositionForScreenPosition(
+      editor.screenPositionForBufferPosition(bufferPosition),
+    );
+    return { left, top: top + component.getLineHeight() / 2 };
+  }
+
+  // A pointer event at a content coordinate, carrying the client coordinates
+  // the component reads back out of it.
+  function movePointerTo({ left, top }) {
+    const lines = editorView.querySelector(".lines").getBoundingClientRect();
+    editorView.dispatchEvent(
+      new MouseEvent("mousemove", {
+        bubbles: true,
+        clientX: lines.left + left,
+        clientY: lines.top + top,
+      }),
+    );
   }
 
   describe("hover tooltips", () => {
@@ -160,7 +187,7 @@ describe("hover", () => {
       await microtasks();
       expect(hover).not.toHaveBeenCalled();
 
-      advanceClock(hoverTime - 1);
+      advanceClock(showDelay - 1);
       await microtasks();
       expect(hover).not.toHaveBeenCalled();
       expect(overlayDecorations(editor).length).toBe(0);
@@ -196,6 +223,78 @@ describe("hover", () => {
       expect(editorView.classList.contains("hover-active")).toBe(false);
     });
 
+    describe("with the pointer", () => {
+      // Points on the hovered word "add", and two well past its last
+      // character but still on its row.
+      let inside;
+      let outside;
+      let furtherOutside;
+
+      beforeEach(async () => {
+        // Hiding well inside the show delay keeps the two paths apart: a
+        // pointer that comes to rest off the text is dismissed by the show
+        // path, and these specs are about the other one.
+        atom.config.set("hover.hideDelay", Math.round(showDelay / 5));
+        hideDelay = atom.config.get("hover.hideDelay");
+
+        addHoverProvider(async () => ({
+          range: [
+            [0, 0],
+            [0, 3],
+          ],
+          contents: { kind: "markdown", value: "docs" },
+        }));
+        const charWidth = editor.getDefaultCharWidth();
+        inside = pixelFor([0, 1]);
+        const end = pixelFor([0, 3]);
+        outside = { left: end.left + 3 * charWidth, top: end.top };
+        furtherOutside = { left: end.left + 6 * charWidth, top: end.top };
+
+        movePointerTo(inside);
+        advanceClock(showDelay);
+        await microtasks();
+        expect(overlayDecorations(editor).length).toBe(1);
+      });
+
+      it("retires the tooltip once the pointer has left the range, moving or not", () => {
+        movePointerTo(outside);
+        advanceClock(hideDelay - 1);
+        // Still moving, and away: a deadline every move pushed back would
+        // never arrive, which is what left the tooltip standing over text it
+        // no longer describes.
+        movePointerTo(furtherOutside);
+        expect(overlayDecorations(editor).length).toBe(1);
+
+        advanceClock(1);
+        expect(overlayDecorations(editor).length).toBe(0);
+      });
+
+      it("keeps the tooltip while the pointer moves within the range", async () => {
+        movePointerTo(pixelFor([0, 2]));
+        advanceClock(hideDelay * 2);
+        await microtasks();
+        expect(overlayDecorations(editor).length).toBe(1);
+      });
+
+      it("keeps the tooltip while the pointer is over it", () => {
+        movePointerTo(outside);
+        overlayItem(editor).dispatchEvent(new MouseEvent("mouseenter"));
+        advanceClock(hideDelay * 2);
+        expect(overlayDecorations(editor).length).toBe(1);
+
+        // Leaving the tooltip starts the countdown again.
+        overlayItem(editor).dispatchEvent(new MouseEvent("mouseleave"));
+        advanceClock(hideDelay);
+        expect(overlayDecorations(editor).length).toBe(0);
+      });
+
+      it("retires the tooltip when the pointer leaves the editor", () => {
+        editorView.dispatchEvent(new MouseEvent("mouseleave"));
+        advanceClock(hideDelay);
+        expect(overlayDecorations(editor).length).toBe(0);
+      });
+    });
+
     it("dismisses the tooltip when the cursor leaves the hovered range", async () => {
       addHoverProvider(async () => ({
         range: [
@@ -209,7 +308,7 @@ describe("hover", () => {
       expect(overlayDecorations(editor).length).toBe(1);
 
       editor.setCursorBufferPosition([1, 3]);
-      advanceClock(hoverTime);
+      advanceClock(showDelay);
       await microtasks();
       expect(overlayDecorations(editor).length).toBe(0);
     });
