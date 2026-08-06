@@ -30,23 +30,33 @@ In your `package.json`:
 ```ts
 type HoverProvider = {
   hover(editor: TextEditor, position: Point): Promise<Hover | null> | Hover | null;
+  hoverGutter?(editor: TextEditor, bufferRow: number): Promise<Hover | null> | Hover | null;
   grammarScopes?: string[] | Set<string>;
   priority?: number;
 };
 
 type Hover = {
-  contents: { value: string; kind?: "markdown" | "plaintext" };
+  contents: { value: string; kind?: "markdown" | "plaintext" } | { element: HTMLElement };
   range?: Range;
 };
 ```
 
-| Member                    | Description                                                                                 |
-| ------------------------- | ------------------------------------------------------------------------------------------- |
-| `hover(editor, position)` | Required. Return the documentation, or `null` to decline.                                   |
-| `grammarScopes`           | Scope names you serve. **Omitting it means every grammar.** May be a getter — see Behavior. |
-| `priority`                | Higher is asked first. Defaults to `0`; `ide-client` uses `2`.                              |
+| Member                     | Description                                                                                 |
+| -------------------------- | ------------------------------------------------------------------------------------------- |
+| `hover(editor, position)`  | Required. Return the documentation, or `null` to decline.                                   |
+| `hoverGutter(editor, row)` | Optional. Answer for a whole row when the pointer rests on the gutter. See Gutter hovers.   |
+| `grammarScopes`            | Scope names you serve. **Omitting it means every grammar.** May be a getter — see Behavior. |
+| `priority`                 | Higher is asked first. Defaults to `0`; `ide-client` uses `2`, `linter` uses `100`.         |
 
-The result must have `contents.value` — an empty or missing value is treated as declining. `range` is what the overlay highlights and what it uses to decide whether the pointer has moved out of the answer.
+The result must carry either `contents.value` or `contents.element` — neither means declining. `range` is what the overlay highlights and what it uses to decide whether the pointer has moved out of the answer.
+
+Return `contents.element` when the answer is not prose. A linter message carries a severity, a rule name and a fix; flattened into markdown all three become text. The tooltip supplies the surface and every rule about when it appears and goes; what stands on it is yours, and its padding is yours too — the popover drops its own for a provided element. The element is dropped with the overlay, so build a fresh one per call and hang nothing off it that needs disposing.
+
+## Gutter hovers
+
+`hover(editor, position)` is asked about a position in the text. Resting the pointer on the **gutter** instead asks `hoverGutter(editor, bufferRow)`, for the sources whose answers belong to a whole line — a diagnostic, a blame line, a fold. A provider without the method is skipped rather than asked with a made-up position.
+
+An answer that omits `range` stands for the whole row, which is usually what you want: the tooltip then survives the pointer travelling from the gutter along the line it describes, and the line is highlighted for as long as it is up.
 
 ## Minimal example
 

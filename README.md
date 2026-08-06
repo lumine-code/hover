@@ -9,6 +9,8 @@ Hover information and signature help come from provider packages — typically l
 - **Hover tooltips**: shows documentation for the symbol under the mouse pointer or the cursor.
 - **Signature help**: displays the active function signature with the current parameter highlighted while typing arguments.
 - **Markdown rendering**: renders provider documentation as sanitized markdown with syntax-highlighted code blocks.
+- **Gutter hovers**: answers for a whole line when the pointer rests on the gutter, for sources such as linter messages.
+- **Provider-built content**: mounts an element a provider composed itself when its answer is not prose.
 - **Trigger characters**: requests signature help when a provider trigger character is typed and keeps it updated on retrigger characters.
 - **Configurable triggers**: hover on mouse rest, on cursor rest, or on command only, with adjustable show and hide delays.
 - **Dismissal**: overlays close on escape, on edits, and once the pointer or the cursor has left the symbol, whether or not it comes to rest.

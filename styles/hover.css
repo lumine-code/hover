@@ -65,11 +65,20 @@ atom-overlay[data-overlay-position="above"] {
 .hover-overlay-view {
   overflow: auto;
   max-height: 300px;
+  /* Its own scrolling has to round off with the box it scrolls inside, or
+     content shows through the corners the border draws around. */
+  border-radius: inherit;
   padding: calc(var(--component-padding) / 2) var(--component-padding);
   font-family: var(--font-family);
   font-size: var(--font-size);
   line-height: 1.5;
   color: var(--text-color);
+}
+
+/* A provider that builds its own content sets its own insets: rows that run to
+   the edge of the popover cannot do that inside the prose padding. */
+.hover-overlay-view.hover-provided {
+  padding: 0;
 }
 
 /* The tooltip is something to read, so its text is selectable — the editor it

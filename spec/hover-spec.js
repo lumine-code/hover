@@ -482,6 +482,75 @@ describe("hover", () => {
       expect(overlayDecorations(editor).length).toBe(0);
     });
 
+    it("mounts an element a provider built for itself", async () => {
+      // Not every answer is prose: a linter message carries a severity and a
+      // rule name that markdown would flatten into text.
+      const built = document.createElement("div");
+      built.classList.add("provider-built");
+      built.textContent = "a message";
+      addHoverProvider(async () => ({ contents: { element: built } }));
+
+      atom.commands.dispatch(editorView, "hover:toggle");
+      await microtasks();
+
+      const item = overlayItem(editor);
+      expect(item.querySelector(".provider-built")).toBe(built);
+      // The popover drops its prose padding for content that lays out its own.
+      expect(item.querySelector(".hover-overlay-view").classList).toContain("hover-provided");
+    });
+
+    it("asks about the row when the pointer rests on the gutter", async () => {
+      const hover = jasmine.createSpy("hover").and.resolveTo(null);
+      const hoverGutter = jasmine.createSpy("hoverGutter").and.callFake(async () => ({
+        contents: { kind: "markdown", value: "two problems on this line" },
+      }));
+      const provider = addHoverProvider(hover);
+      provider.hoverGutter = hoverGutter;
+
+      // Tall enough for the second row to be reachable: the component clamps
+      // a mouse event into its scroll container, and a spec editor is short.
+      editorView.style.height = "100px";
+      editorView.getComponent().measureDimensions();
+      editorView.getComponent().updateSync();
+
+      const gutterContainer = editorView.querySelector(".gutter-container");
+      const gutter = gutterContainer.getBoundingClientRect();
+      const lines = editorView.querySelector(".lines").getBoundingClientRect();
+      // Dispatched on the gutter, because what marks a pointer event as a
+      // gutter event is where it landed, not where it was heard.
+      gutterContainer.dispatchEvent(
+        new MouseEvent("mousemove", {
+          bubbles: true,
+          clientX: gutter.left + gutter.width / 2,
+          clientY: lines.top + pixelFor([1, 0]).top,
+        }),
+      );
+      advanceClock(showDelay);
+      await microtasks();
+
+      // The row is the question, so the position-based method is not asked at
+      // a column the pointer never rested on.
+      expect(hover).not.toHaveBeenCalled();
+      expect(hoverGutter).toHaveBeenCalled();
+      expect(hoverGutter.calls.mostRecent().args[1]).toBe(1);
+      expect(overlayDecorations(editor).length).toBe(1);
+
+      // An answer without a range stands for the whole row, so the highlight
+      // covers the line and the pointer can travel along it.
+      const highlight = editor
+        .getHighlightDecorations()
+        .find((d) => d.getProperties().class === "hover-highlight-region");
+      expect(
+        highlight
+          .getMarker()
+          .getBufferRange()
+          .isEqual([
+            [1, 0],
+            [1, editor.lineTextForBufferRow(1).length],
+          ]),
+      ).toBe(true);
+    });
+
     it("renders fenced code blocks as embedded read-only editors and destroys them on dismiss", async () => {
       addHoverProvider(async () => ({
         contents: { kind: "markdown", value: "```js\nlet x = 1;\n```\n\nSome docs." },
