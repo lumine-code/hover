@@ -1,15 +1,25 @@
-/* Hover tooltip and signature help overlays. The overlay item is an
-   `atom-panel.hover-overlay-view-container` holding a padded
-   `.hover-overlay-view` panel, mounted as an overlay decoration. */
+/* Hover tooltip and signature help overlays. The overlay item is a
+   `.hover-overlay-view-container` popover holding a padded
+   `.hover-overlay-view`, mounted as an overlay decoration. */
 
 .hover-overlay-view-container {
   overflow: auto;
   max-height: 300px;
   max-width: min(var(--text-editor-width, 50vw), 50vw);
+  border: 1px solid var(--tool-panel-border-color);
+  border-radius: var(--component-border-radius);
+  background-color: var(--tool-panel-background-color);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 15%);
 }
 
+/* The overlay hangs inside the editor and would otherwise be set in the
+   editor's own font and metrics; it is UI, and reads as UI. */
 .hover-overlay-view {
+  padding: calc(var(--component-padding) / 2) var(--component-padding);
   font-family: var(--font-family);
+  font-size: var(--font-size);
+  line-height: 1.5;
+  color: var(--text-color);
 }
 
 .hover-overlay-view > :first-child {
@@ -20,10 +30,29 @@
   margin-bottom: 0;
 }
 
-.hover-overlay-view pre {
-  position: relative;
+/* A code block is painted in the syntax theme's colors, so its background is
+   the syntax theme's too — a UI surface would be the wrong one under a mixed
+   pair of themes. It is pulled a fifth of the way toward the panel to sit a
+   little below it, and the border frames it so the change of background reads
+   as a block rather than as a seam. */
+.hover-overlay-view pre,
+.hover-overlay-view atom-text-editor {
+  padding: 0.3em 0.5em;
+  border: 1px solid var(--tool-panel-border-color);
+  border-radius: var(--component-border-radius);
   color: var(--syntax-text-color);
-  background-color: var(--syntax-background-color);
+  background-color: color-mix(
+    in srgb,
+    var(--syntax-background-color) 80%,
+    var(--tool-panel-background-color)
+  );
+}
+
+/* A signature label is code, and is set like the code blocks are: the fenced
+   ones are editors and carry the editor's own font. */
+.hover-overlay-view pre {
+  font-family: var(--editor-font-family);
+  font-size: var(--editor-font-size);
   /* Never break lines in the middle of a word. */
   word-break: normal;
 }
@@ -35,11 +64,29 @@
 /* Read-only editors standing in for fenced code blocks. */
 .hover-overlay-view atom-text-editor {
   margin: 0 0 0.5rem;
-  border-radius: 3px;
 }
 
 .hover-overlay-view atom-text-editor:last-child {
   margin-bottom: 0;
+}
+
+/* Inline code carries no syntax colors, so it needs the tint to read as code. */
+.hover-overlay-view code {
+  padding: 0 0.3em;
+  border-radius: var(--component-border-radius);
+  background-color: rgb(from var(--text-color) r g b / 8%);
+}
+
+.hover-overlay-view pre code {
+  padding: 0;
+  background: none;
+}
+
+.hover-overlay-view hr {
+  height: 1px;
+  margin: 0.6em 0;
+  border: none;
+  background-color: var(--tool-panel-border-color);
 }
 
 /* Plain-text hover contents keep their line breaks. */
@@ -47,7 +94,8 @@
   white-space: pre-wrap;
 }
 
-/* The active parameter within the signature label. */
+/* The active parameter within the signature label, which sits on the code
+   surface and is tinted from the text drawn there. */
 .hover-overlay-view .hover-active-parameter {
   background-color: color-mix(in srgb, var(--syntax-text-color) 18%, transparent);
   border-radius: 2px;

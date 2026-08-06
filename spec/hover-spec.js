@@ -233,6 +233,24 @@ describe("hover", () => {
       expect(model.isDestroyed()).toBe(true);
     });
 
+    it("sizes the tooltip to a code block when the answer is nothing else", async () => {
+      // The overlay is as wide as what it holds, and an answer that is one
+      // fenced signature holds a single embedded editor: it has to report its
+      // own width or the tooltip collapses to its padding.
+      addHoverProvider(async () => ({
+        contents: { kind: "markdown", value: "```js\nfunction addTwoNumbers(a, b) {}\n```" },
+      }));
+      atom.commands.dispatch(editorView, "hover:toggle");
+      await microtasks();
+
+      // The overlay reaches the DOM on the editor's next render, and the code
+      // block measures itself the moment it lands there.
+      const item = overlayItem(editor);
+      editorView.getComponent().updateSync();
+      expect(item.isConnected).toBe(true);
+      expect(item.getBoundingClientRect().width).toBeGreaterThan(100);
+    });
+
     it("renders plaintext contents literally and keeps raw HTML in markdown as text", async () => {
       addHoverProvider(async () => ({
         contents: { kind: "plaintext", value: "a < b & c" },
