@@ -22,6 +22,14 @@
   color: var(--text-color);
 }
 
+/* The tooltip is something to read, so its text is selectable — the editor it
+   hangs inside turns native selection off for everything below it, and the
+   code blocks are editors that turn it off again on their own account. */
+.hover-overlay-view,
+.hover-overlay-view atom-text-editor {
+  user-select: text;
+}
+
 .hover-overlay-view > :first-child {
   margin-top: 0;
 }

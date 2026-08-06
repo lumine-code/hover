@@ -115,6 +115,18 @@ describe("hover", () => {
     return { left, top: top + component.getLineHeight() / 2 };
   }
 
+  // Selects everything in the mounted overlay, the way a drag across it would.
+  // It only takes if the package's stylesheet has turned native selection back
+  // on for the overlay, which the editor around it turns off.
+  function selectTooltipContents() {
+    const range = document.createRange();
+    range.selectNodeContents(overlayItem(editor).querySelector(".hover-overlay-view"));
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    return selection;
+  }
+
   // A pointer event at a content coordinate, carrying the client coordinates
   // the component reads back out of it.
   function movePointerTo({ left, top }) {
@@ -310,6 +322,36 @@ describe("hover", () => {
         editorView.dispatchEvent(new MouseEvent("mouseleave"));
         advanceClock(hideDelay);
         expect(overlayDecorations(editor).length).toBe(0);
+      });
+
+      it("keeps the tooltip while its text is selected", () => {
+        selectTooltipContents();
+        movePointerTo(outside);
+        advanceClock(hideDelay * 2);
+        expect(overlayDecorations(editor).length).toBe(1);
+
+        // Once the selection is gone the pointer decides again.
+        window.getSelection().removeAllRanges();
+        movePointerTo(furtherOutside);
+        advanceClock(hideDelay);
+        expect(overlayDecorations(editor).length).toBe(0);
+      });
+
+      it("copies the tooltip's selection rather than the editor's", () => {
+        editor.setSelectedBufferRange([
+          [1, 0],
+          [1, 6],
+        ]);
+        atom.clipboard.write("untouched");
+        selectTooltipContents();
+
+        atom.commands.dispatch(editorView, "core:copy");
+        expect(atom.clipboard.read()).toBe("docs");
+
+        // With nothing selected in it the editor's own copy runs as before.
+        window.getSelection().removeAllRanges();
+        atom.commands.dispatch(editorView, "core:copy");
+        expect(atom.clipboard.read()).toBe("second");
       });
     });
 
