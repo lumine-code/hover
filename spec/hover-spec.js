@@ -9,6 +9,13 @@ async function microtasks(count = 40) {
   for (let i = 0; i < count; i++) await Promise.resolve();
 }
 
+// The overlay reaches the DOM on the editor's next render, and is shown once
+// it has been measured and placed. Both take a frame, and the spec clock does
+// not drive frames.
+async function frames(count = 2) {
+  for (let i = 0; i < count; i++) await new Promise(requestAnimationFrame);
+}
+
 function overlayDecorations(editor) {
   return editor.getOverlayDecorations().filter((d) => d.getProperties().class === "hover-overlay");
 }
@@ -268,6 +275,7 @@ describe("hover", () => {
         movePointerTo(inside);
         advanceClock(showDelay);
         await microtasks();
+        await frames();
         expect(overlayDecorations(editor).length).toBe(1);
       });
 

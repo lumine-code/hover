@@ -3,8 +3,13 @@
    `.hover-overlay-view`, mounted as an overlay decoration. */
 
 .hover-overlay-view-container {
-  overflow: auto;
-  max-height: 300px;
+  --hover-arrow-size: 6px;
+
+  position: relative;
+  /* Standing off the line leaves the word being explained readable, and room
+     for the pointer. The editor reads these margins when it decides whether
+     the tooltip still fits below the line. */
+  margin: var(--hover-arrow-size) 0;
   max-width: min(var(--text-editor-width, 50vw), 50vw);
   border: 1px solid var(--overlay-border-color);
   border-radius: var(--component-border-radius);
@@ -12,9 +17,54 @@
   box-shadow: 0 2px 8px 1px rgb(0 0 0 / 30%);
 }
 
+/* The pointer, drawn twice: the border colour first, the background a pixel
+   over it, which is how a bordered box grows a triangle. It follows the fit
+   the editor chose — `--overlay-anchor-offset` is how far the hovered word
+   sits inside the tooltip after it was pushed off the window edge, and
+   `above` says the tooltip was flipped over the line. */
+.hover-overlay-view-container::before,
+.hover-overlay-view-container::after {
+  content: "";
+  position: absolute;
+  left: clamp(
+    var(--component-border-radius),
+    calc(var(--overlay-anchor-offset, 25%) - var(--hover-arrow-size)),
+    calc(100% - var(--hover-arrow-size) * 2 - var(--component-border-radius))
+  );
+  border: var(--hover-arrow-size) solid transparent;
+  border-top-width: 0;
+  border-bottom-color: var(--overlay-border-color);
+  bottom: 100%;
+}
+
+.hover-overlay-view-container::after {
+  border-bottom-color: var(--overlay-background-color);
+  margin-bottom: -1px;
+}
+
+atom-overlay[data-overlay-position="above"] {
+  .hover-overlay-view-container::before,
+  .hover-overlay-view-container::after {
+    border-top-width: var(--hover-arrow-size);
+    border-bottom-width: 0;
+    border-top-color: var(--overlay-border-color);
+    bottom: auto;
+    top: 100%;
+  }
+
+  .hover-overlay-view-container::after {
+    border-top-color: var(--overlay-background-color);
+    margin-bottom: 0;
+    margin-top: -1px;
+  }
+}
+
 /* The overlay hangs inside the editor and would otherwise be set in the
-   editor's own font and metrics; it is UI, and reads as UI. */
+   editor's own font and metrics; it is UI, and reads as UI. The content
+   scrolls, not the box: the pointer is drawn outside it. */
 .hover-overlay-view {
+  overflow: auto;
+  max-height: 300px;
   padding: calc(var(--component-padding) / 2) var(--component-padding);
   font-family: var(--font-family);
   font-size: var(--font-size);
