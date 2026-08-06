@@ -324,6 +324,35 @@ describe("hover", () => {
         expect(overlayDecorations(editor).length).toBe(0);
       });
 
+      it("waits out the hide delay however short the show delay is", async () => {
+        // A show delay well below the hide delay used to retire the tooltip
+        // almost at once: the timer that asks for one also decided to drop
+        // one, so the hide delay never got a say.
+        atom.config.set("hover.showDelay", 1);
+        atom.config.set("hover.hideDelay", 500);
+        movePointerTo(inside);
+        advanceClock(1);
+        await microtasks();
+        expect(overlayDecorations(editor).length).toBe(1);
+
+        movePointerTo(outside);
+        advanceClock(499);
+        await microtasks();
+        expect(overlayDecorations(editor).length).toBe(1);
+
+        advanceClock(1);
+        expect(overlayDecorations(editor).length).toBe(0);
+      });
+
+      it("retires the tooltip the moment a click lands outside it", () => {
+        overlayItem(editor).dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+        expect(overlayDecorations(editor).length).toBe(1);
+
+        // No delay: a click elsewhere is not an ambiguous signal.
+        editorView.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+        expect(overlayDecorations(editor).length).toBe(0);
+      });
+
       it("keeps the tooltip when the pointer leaves it and comes straight back", () => {
         const item = overlayItem(editor);
         item.dispatchEvent(new MouseEvent("mouseenter"));
@@ -381,9 +410,49 @@ describe("hover", () => {
       await microtasks();
       expect(overlayDecorations(editor).length).toBe(1);
 
+      // The cursor leaving is noticed on the show delay and acted on after the
+      // hide delay, the one deadline every way of losing a tooltip goes
+      // through.
       editor.setCursorBufferPosition([1, 3]);
       advanceClock(showDelay);
       await microtasks();
+      expect(overlayDecorations(editor).length).toBe(1);
+
+      advanceClock(hideDelay);
+      expect(overlayDecorations(editor).length).toBe(0);
+    });
+
+    it("keeps the tooltip when the next symbol has nothing to say", async () => {
+      // Moving off a symbol onto one no provider answers for — a bracket, a
+      // comma — is the pointer leaving, and leaving is the hide delay's to
+      // time. An empty answer used to retire the tooltip there and then,
+      // which a short show delay turned into an instant disappearance.
+      atom.config.set("hover.showDelay", 1);
+      atom.config.set("hover.hideDelay", 500);
+      editor.setText("add and more\n");
+      addHoverProvider(async (_editor, point) =>
+        point.column <= 3
+          ? {
+              range: [
+                [0, 0],
+                [0, 3],
+              ],
+              contents: { kind: "markdown", value: "docs" },
+            }
+          : null,
+      );
+
+      movePointerTo(pixelFor([0, 1]));
+      advanceClock(1);
+      await microtasks();
+      expect(overlayDecorations(editor).length).toBe(1);
+
+      movePointerTo(pixelFor([0, 8]));
+      advanceClock(1);
+      await microtasks();
+      expect(overlayDecorations(editor).length).toBe(1);
+
+      advanceClock(499);
       expect(overlayDecorations(editor).length).toBe(0);
     });
 
