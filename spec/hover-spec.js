@@ -324,6 +324,20 @@ describe("hover", () => {
         expect(overlayDecorations(editor).length).toBe(0);
       });
 
+      it("keeps the tooltip when the pointer leaves it and comes straight back", () => {
+        const item = overlayItem(editor);
+        item.dispatchEvent(new MouseEvent("mouseenter"));
+        item.dispatchEvent(new MouseEvent("mouseleave"));
+        movePointerTo(outside);
+        item.dispatchEvent(new MouseEvent("mouseenter"));
+
+        // Long enough for both delays: the hide is cancelled by coming back,
+        // and the request left pending over the text must not answer for a
+        // position the pointer has left.
+        advanceClock(Math.max(showDelay, hideDelay) * 2);
+        expect(overlayDecorations(editor).length).toBe(1);
+      });
+
       it("keeps the tooltip while its text is selected", () => {
         selectTooltipContents();
         movePointerTo(outside);
