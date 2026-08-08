@@ -1,5 +1,5 @@
 const path = require("path");
-const { CompositeDisposable } = require("atom");
+const { CompositeDisposable, Disposable } = require("atom");
 
 const packageRoot = path.join(__dirname, "..");
 
@@ -113,11 +113,12 @@ describe("hover", () => {
   // Where a buffer position sits in the editor's content coordinates. The
   // pointer moves below stay on the first row: the component clamps a mouse
   // event to its scroll container, and a spec editor is short.
-  function pixelFor(bufferPosition) {
-    const component = editorView.getComponent();
+  function pixelFor(bufferPosition, targetEditor = editor) {
+    const targetView = atom.views.getView(targetEditor);
+    const component = targetView.getComponent();
     component.updateSync();
     const { left, top } = component.pixelPositionForScreenPosition(
-      editor.screenPositionForBufferPosition(bufferPosition),
+      targetEditor.screenPositionForBufferPosition(bufferPosition),
     );
     return { left, top: top + component.getLineHeight() / 2 };
   }
@@ -136,9 +137,14 @@ describe("hover", () => {
 
   // A pointer event at a content coordinate, carrying the client coordinates
   // the component reads back out of it.
-  function movePointerTo({ left, top }) {
-    const lines = editorView.querySelector(".lines").getBoundingClientRect();
-    editorView.dispatchEvent(
+  function movePointerTo({ left, top }, targetEditor = editor) {
+    const targetView = atom.views.getView(targetEditor);
+    const component = targetView.getComponent();
+    component.updateSync();
+    const screenRow = component.screenPositionForPixelPosition({ left, top }).row;
+    const line = targetView.querySelector(`.line[data-screen-row="${screenRow}"]`);
+    const lines = targetView.querySelector(".lines").getBoundingClientRect();
+    line.dispatchEvent(
       new MouseEvent("mousemove", {
         bubbles: true,
         clientX: lines.left + left,
@@ -422,6 +428,80 @@ describe("hover", () => {
         atom.commands.dispatch(editorView, "core:copy");
         expect(atom.clipboard.read()).toBe("second");
       });
+    });
+
+    it("does not look through a block decoration for source text", async () => {
+      const hover = jasmine.createSpy("hover").and.resolveTo({
+        range: [
+          [1, 0],
+          [1, 6],
+        ],
+        contents: { kind: "markdown", value: "docs behind the result" },
+      });
+      addHoverProvider(hover);
+
+      const result = document.createElement("div");
+      result.classList.add("inline-result");
+      result.style.height = "30px";
+      const marker = editor.markBufferPosition([0, Infinity]);
+      const decoration = editor.decorateMarker(marker, {
+        type: "block",
+        position: "after",
+        item: result,
+      });
+      disposables.add(
+        new CompositeDisposable(
+          new Disposable(() => decoration.destroy()),
+          new Disposable(() => marker.destroy()),
+        ),
+      );
+      editorView.getComponent().updateSync();
+
+      const lines = editorView.querySelector(".lines").getBoundingClientRect();
+      const resultRect = result.getBoundingClientRect();
+      result.dispatchEvent(
+        new MouseEvent("mousemove", {
+          bubbles: true,
+          clientX: lines.left + editor.getDefaultCharWidth(),
+          clientY: resultRect.top + resultRect.height / 2,
+        }),
+      );
+      advanceClock(showDelay);
+      await microtasks();
+
+      expect(hover).not.toHaveBeenCalled();
+      expect(overlayDecorations(editor).length).toBe(0);
+    });
+
+    it("shows pointer hover in an editor that is not active", async () => {
+      const otherEditor = await atom.workspace.open(undefined, {
+        split: "right",
+        activatePane: false,
+      });
+      otherEditor.setText("other symbol\n");
+      const otherView = atom.views.getView(otherEditor);
+      editorView.focus();
+      await microtasks();
+
+      const hover = jasmine.createSpy("hover").and.resolveTo({
+        range: [
+          [0, 0],
+          [0, 5],
+        ],
+        contents: { kind: "markdown", value: "other docs" },
+      });
+      addHoverProvider(hover);
+
+      movePointerTo(pixelFor([0, 2], otherEditor), otherEditor);
+      advanceClock(showDelay);
+      await microtasks();
+
+      expect(atom.workspace.getActiveTextEditor()).toBe(editor);
+      expect(hover).toHaveBeenCalled();
+      expect(hover.calls.mostRecent().args[0]).toBe(otherEditor);
+      expect(overlayDecorations(otherEditor).length).toBe(1);
+      expect(overlayDecorations(editor).length).toBe(0);
+      expect(otherView.classList.contains("hover-active")).toBe(true);
     });
 
     it("dismisses the tooltip when the cursor leaves the hovered range", async () => {
