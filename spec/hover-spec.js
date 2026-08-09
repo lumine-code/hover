@@ -1,5 +1,5 @@
 const path = require("path");
-const { CompositeDisposable, Disposable } = require("atom");
+const { CompositeDisposable, Disposable } = require("lumine");
 
 const packageRoot = path.join(__dirname, "..");
 
@@ -48,26 +48,26 @@ describe("hover", () => {
   let hideDelay;
 
   beforeEach(async () => {
-    jasmine.attachToDOM(atom.views.getView(atom.workspace));
+    jasmine.attachToDOM(lumine.views.getView(lumine.workspace));
     disposables = new CompositeDisposable();
 
-    const pack = await atom.packages.activatePackage(packageRoot);
+    const pack = await lumine.packages.activatePackage(packageRoot);
     mainModule = pack.mainModule;
-    showDelay = atom.config.get("hover.showDelay");
-    hideDelay = atom.config.get("hover.hideDelay");
+    showDelay = lumine.config.get("hover.showDelay");
+    hideDelay = lumine.config.get("hover.hideDelay");
 
-    editor = await atom.workspace.open();
+    editor = await lumine.workspace.open();
     editor.setText("add\nsecond line\n");
     editor.setCursorBufferPosition([0, 0]);
-    editorView = atom.views.getView(editor);
+    editorView = lumine.views.getView(editor);
     editorView.focus();
     await microtasks();
   });
 
   afterEach(async () => {
     disposables.dispose();
-    await atom.packages.deactivatePackage("hover");
-    for (const open of atom.workspace.getTextEditors()) open.destroy();
+    await lumine.packages.deactivatePackage("hover");
+    for (const open of lumine.workspace.getTextEditors()) open.destroy();
   });
 
   function addHoverProvider(hover) {
@@ -114,7 +114,7 @@ describe("hover", () => {
   // pointer moves below stay on the first row: the component clamps a mouse
   // event to its scroll container, and a spec editor is short.
   function pixelFor(bufferPosition, targetEditor = editor) {
-    const targetView = atom.views.getView(targetEditor);
+    const targetView = lumine.views.getView(targetEditor);
     const component = targetView.getComponent();
     component.updateSync();
     const { left, top } = component.pixelPositionForScreenPosition(
@@ -138,7 +138,7 @@ describe("hover", () => {
   // A pointer event at a content coordinate, carrying the client coordinates
   // the component reads back out of it.
   function movePointerTo({ left, top }, targetEditor = editor) {
-    const targetView = atom.views.getView(targetEditor);
+    const targetView = lumine.views.getView(targetEditor);
     const component = targetView.getComponent();
     component.updateSync();
     const screenRow = component.screenPositionForPixelPosition({ left, top }).row;
@@ -165,7 +165,7 @@ describe("hover", () => {
       addHoverProvider(hover);
       editor.setCursorBufferPosition([0, 1]);
 
-      atom.commands.dispatch(editorView, "hover:toggle");
+      lumine.commands.dispatch(editorView, "hover:toggle");
       await microtasks();
 
       expect(hover).toHaveBeenCalled();
@@ -196,13 +196,13 @@ describe("hover", () => {
       ).toBe(true);
 
       // Toggling again at the same position dismisses the tooltip.
-      atom.commands.dispatch(editorView, "hover:toggle");
+      lumine.commands.dispatch(editorView, "hover:toggle");
       await microtasks();
       expect(overlayDecorations(editor).length).toBe(0);
     });
 
     it("honors the hover delay when showing on cursor rest", async () => {
-      atom.config.set("hover.showOnCursorMove", true);
+      lumine.config.set("hover.showOnCursorMove", true);
       const hover = jasmine.createSpy("hover").and.callFake(async () => ({
         contents: { kind: "markdown", value: "docs" },
       }));
@@ -231,19 +231,19 @@ describe("hover", () => {
         ],
         contents: { kind: "markdown", value: "docs" },
       }));
-      atom.commands.dispatch(editorView, "hover:toggle");
+      lumine.commands.dispatch(editorView, "hover:toggle");
       await microtasks();
       expect(overlayDecorations(editor).length).toBe(1);
 
       // While an overlay is open the editor carries the class that scopes the
       // escape keybinding to it.
       expect(editorView.classList.contains("hover-active")).toBe(true);
-      const bindings = atom.keymaps
+      const bindings = lumine.keymaps
         .findKeyBindings({ keystrokes: "escape", target: editorView })
         .map((binding) => binding.command);
       expect(bindings).toContain("hover:dismiss");
 
-      atom.commands.dispatch(editorView, "hover:dismiss");
+      lumine.commands.dispatch(editorView, "hover:dismiss");
       expect(overlayDecorations(editor).length).toBe(0);
       expect(editorView.classList.contains("hover-active")).toBe(false);
     });
@@ -259,8 +259,8 @@ describe("hover", () => {
         // Hiding well inside the show delay keeps the two paths apart: a
         // pointer that comes to rest off the text is dismissed by the show
         // path, and these specs are about the other one.
-        atom.config.set("hover.hideDelay", Math.round(showDelay / 5));
-        hideDelay = atom.config.get("hover.hideDelay");
+        lumine.config.set("hover.hideDelay", Math.round(showDelay / 5));
+        hideDelay = lumine.config.get("hover.hideDelay");
 
         // Enough rows below the hovered word for the buffer to scroll.
         editor.setText(`add\n${"second line\n".repeat(40)}`);
@@ -342,8 +342,8 @@ describe("hover", () => {
         // A show delay well below the hide delay used to retire the tooltip
         // almost at once: the timer that asks for one also decided to drop
         // one, so the hide delay never got a say.
-        atom.config.set("hover.showDelay", 1);
-        atom.config.set("hover.hideDelay", 500);
+        lumine.config.set("hover.showDelay", 1);
+        lumine.config.set("hover.hideDelay", 500);
         movePointerTo(inside);
         advanceClock(1);
         await microtasks();
@@ -417,16 +417,16 @@ describe("hover", () => {
           [1, 0],
           [1, 6],
         ]);
-        atom.clipboard.write("untouched");
+        lumine.clipboard.write("untouched");
         selectTooltipContents();
 
-        atom.commands.dispatch(editorView, "core:copy");
-        expect(atom.clipboard.read()).toBe("docs");
+        lumine.commands.dispatch(editorView, "core:copy");
+        expect(lumine.clipboard.read()).toBe("docs");
 
         // With nothing selected in it the editor's own copy runs as before.
         window.getSelection().removeAllRanges();
-        atom.commands.dispatch(editorView, "core:copy");
-        expect(atom.clipboard.read()).toBe("second");
+        lumine.commands.dispatch(editorView, "core:copy");
+        expect(lumine.clipboard.read()).toBe("second");
       });
     });
 
@@ -474,12 +474,12 @@ describe("hover", () => {
     });
 
     it("shows pointer hover in an editor that is not active", async () => {
-      const otherEditor = await atom.workspace.open(undefined, {
+      const otherEditor = await lumine.workspace.open(undefined, {
         split: "right",
         activatePane: false,
       });
       otherEditor.setText("other symbol\n");
-      const otherView = atom.views.getView(otherEditor);
+      const otherView = lumine.views.getView(otherEditor);
       editorView.focus();
       await microtasks();
 
@@ -496,7 +496,7 @@ describe("hover", () => {
       advanceClock(showDelay);
       await microtasks();
 
-      expect(atom.workspace.getActiveTextEditor()).toBe(editor);
+      expect(lumine.workspace.getActiveTextEditor()).toBe(editor);
       expect(hover).toHaveBeenCalled();
       expect(hover.calls.mostRecent().args[0]).toBe(otherEditor);
       expect(overlayDecorations(otherEditor).length).toBe(1);
@@ -512,7 +512,7 @@ describe("hover", () => {
         ],
         contents: { kind: "markdown", value: "docs" },
       }));
-      atom.commands.dispatch(editorView, "hover:toggle");
+      lumine.commands.dispatch(editorView, "hover:toggle");
       await microtasks();
       expect(overlayDecorations(editor).length).toBe(1);
 
@@ -533,8 +533,8 @@ describe("hover", () => {
       // comma — is the pointer leaving, and leaving is the hide delay's to
       // time. An empty answer used to retire the tooltip there and then,
       // which a short show delay turned into an instant disappearance.
-      atom.config.set("hover.showDelay", 1);
-      atom.config.set("hover.hideDelay", 500);
+      lumine.config.set("hover.showDelay", 1);
+      lumine.config.set("hover.hideDelay", 500);
       editor.setText("add and more\n");
       addHoverProvider(async (_editor, point) =>
         point.column <= 3
@@ -583,7 +583,7 @@ describe("hover", () => {
       diagnostic.priority = 100;
 
       editor.setCursorBufferPosition([0, 1]);
-      atom.commands.dispatch(editorView, "hover:toggle");
+      lumine.commands.dispatch(editorView, "hover:toggle");
       await microtasks();
 
       const sections = overlayItem(editor).querySelectorAll(".hover-section");
@@ -600,7 +600,7 @@ describe("hover", () => {
       built.textContent = "a message";
       addHoverProvider(async () => ({ contents: { element: built } }));
 
-      atom.commands.dispatch(editorView, "hover:toggle");
+      lumine.commands.dispatch(editorView, "hover:toggle");
       await microtasks();
 
       const item = overlayItem(editor);
@@ -665,18 +665,18 @@ describe("hover", () => {
       addHoverProvider(async () => ({
         contents: { kind: "markdown", value: "```js\nlet x = 1;\n```\n\nSome docs." },
       }));
-      atom.commands.dispatch(editorView, "hover:toggle");
+      lumine.commands.dispatch(editorView, "hover:toggle");
       await microtasks();
 
       const item = overlayItem(editor);
       expect(item).not.toBeNull();
-      const embedded = item.querySelector("atom-text-editor");
+      const embedded = item.querySelector("lumine-text-editor");
       expect(embedded).not.toBeNull();
       const model = embedded.getModel();
       expect(model.getText()).toBe("let x = 1;");
       expect(item.textContent).toContain("Some docs.");
 
-      atom.commands.dispatch(editorView, "hover:dismiss");
+      lumine.commands.dispatch(editorView, "hover:dismiss");
       expect(model.isDestroyed()).toBe(true);
     });
 
@@ -687,7 +687,7 @@ describe("hover", () => {
       addHoverProvider(async () => ({
         contents: { kind: "markdown", value: "```js\nfunction addTwoNumbers(a, b) {}\n```" },
       }));
-      atom.commands.dispatch(editorView, "hover:toggle");
+      lumine.commands.dispatch(editorView, "hover:toggle");
       await microtasks();
 
       // The overlay reaches the DOM on the editor's next render, and the code
@@ -702,10 +702,10 @@ describe("hover", () => {
       addHoverProvider(async () => ({
         contents: { kind: "plaintext", value: "a < b & c" },
       }));
-      atom.commands.dispatch(editorView, "hover:toggle");
+      lumine.commands.dispatch(editorView, "hover:toggle");
       await microtasks();
       expect(overlayItem(editor).querySelector(".hover-plaintext").textContent).toBe("a < b & c");
-      atom.commands.dispatch(editorView, "hover:dismiss");
+      lumine.commands.dispatch(editorView, "hover:dismiss");
 
       addHoverProvider(async () => ({
         contents: { kind: "markdown", value: "Mentions <pre> tags in prose." },
@@ -713,7 +713,7 @@ describe("hover", () => {
       // The first registered provider answers null so the second one is asked.
       const providers = mainModule.overlayManager.hoverRegistry.providers;
       providers[0].hover = async () => null;
-      atom.commands.dispatch(editorView, "hover:toggle");
+      lumine.commands.dispatch(editorView, "hover:toggle");
       await microtasks();
       const item = overlayItem(editor);
       expect(item.querySelector("pre")).toBeNull();
@@ -723,7 +723,7 @@ describe("hover", () => {
     it("shows nothing when every provider answers null", async () => {
       const hover = jasmine.createSpy("hover").and.resolveTo(null);
       addHoverProvider(hover);
-      atom.commands.dispatch(editorView, "hover:toggle");
+      lumine.commands.dispatch(editorView, "hover:toggle");
       await microtasks();
       expect(hover).toHaveBeenCalled();
       expect(overlayDecorations(editor).length).toBe(0);
@@ -779,7 +779,7 @@ describe("hover", () => {
       expect(overlayDecorations(editor).length).toBe(1);
 
       // A retrigger character with no open overlay does not query the provider.
-      atom.commands.dispatch(editorView, "hover:dismiss");
+      lumine.commands.dispatch(editorView, "hover:dismiss");
       editor.insertText(",");
       await microtasks();
       expect(provider.getSignature.calls.count()).toBe(2);
@@ -815,12 +815,12 @@ describe("hover", () => {
       await microtasks();
       expect(overlayDecorations(editor).length).toBe(1);
 
-      atom.commands.dispatch(editorView, "hover:dismiss");
+      lumine.commands.dispatch(editorView, "hover:dismiss");
       expect(overlayDecorations(editor).length).toBe(0);
 
       editor.insertText("1");
       await microtasks();
-      atom.commands.dispatch(editorView, "hover:toggle-signature-help");
+      lumine.commands.dispatch(editorView, "hover:toggle-signature-help");
       await microtasks();
       expect(overlayDecorations(editor).length).toBe(1);
 
@@ -830,7 +830,7 @@ describe("hover", () => {
     });
 
     it("does not trigger while typing when the setting is disabled, but the command still works", async () => {
-      atom.config.set("hover.showSignatureWhileTyping", false);
+      lumine.config.set("hover.showSignatureWhileTyping", false);
       const provider = addSignatureProvider();
       editor.setText("add");
       editor.setCursorBufferPosition([0, 3]);
@@ -839,7 +839,7 @@ describe("hover", () => {
       expect(provider.getSignature).not.toHaveBeenCalled();
       expect(overlayDecorations(editor).length).toBe(0);
 
-      atom.commands.dispatch(editorView, "hover:toggle-signature-help");
+      lumine.commands.dispatch(editorView, "hover:toggle-signature-help");
       await microtasks();
       expect(provider.getSignature).toHaveBeenCalled();
       expect(provider.getSignature.calls.mostRecent().args[2]).toEqual({

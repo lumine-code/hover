@@ -22,7 +22,7 @@ To install `hover` search for _hover_ in the Install pane of the Lumine settings
 
 ## Commands
 
-Commands available in `atom-text-editor`:
+Commands available in `lumine-text-editor`:
 
 - `hover:toggle`: show or hide the hover tooltip at the cursor position,
 - `hover:toggle-signature-help`: show or hide the signature help overlay at the cursor position,

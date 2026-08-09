@@ -1,9 +1,9 @@
 {
-  "atom-text-editor": {
+  "lumine-text-editor": {
     "cmdorctrl-alt-h": "hover:toggle",
     "cmdorctrl-alt-j": "hover:toggle-signature-help"
   },
-  "atom-text-editor.hover-active": {
+  "lumine-text-editor.hover-active": {
     "escape": "hover:dismiss"
   }
 }

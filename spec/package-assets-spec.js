@@ -8,7 +8,7 @@ const exists = (rel) => fs.existsSync(path.join(root, rel));
 // Guards for the pulsar-hover -> hover rebrand and the TypeScript/Rollup/Less
 // -> plain CommonJS/CSS modernization. The command prefix, config namespace,
 // and package name all move to `hover`; markdown rendering moves to the
-// built-in `atom.tools.markdown` API, and the legacy atom-ide back-compat
+// built-in `lumine.tools.markdown` API, and the legacy atom-ide back-compat
 // services are dropped.
 describe("hover package assets", () => {
   it("ships the keymap as JSON, not CSON", () => {
@@ -20,9 +20,9 @@ describe("hover package assets", () => {
 
   it("uses the hover: command prefix and escape dismissal in the keymap", () => {
     const keymap = JSON.parse(read("keymaps/hover.json"));
-    expect(keymap["atom-text-editor"]["cmdorctrl-alt-h"]).toBe("hover:toggle");
-    expect(keymap["atom-text-editor"]["cmdorctrl-alt-j"]).toBe("hover:toggle-signature-help");
-    expect(keymap["atom-text-editor.hover-active"]["escape"]).toBe("hover:dismiss");
+    expect(keymap["lumine-text-editor"]["cmdorctrl-alt-h"]).toBe("hover:toggle");
+    expect(keymap["lumine-text-editor"]["cmdorctrl-alt-j"]).toBe("hover:toggle-signature-help");
+    expect(keymap["lumine-text-editor.hover-active"]["escape"]).toBe("hover:dismiss");
     expect(read("keymaps/hover.json")).not.toContain("pulsar-hover:");
   });
 

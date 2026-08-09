@@ -42,7 +42,7 @@
   margin-bottom: -1px;
 }
 
-atom-overlay[data-overlay-position="above"] {
+lumine-overlay[data-overlay-position="above"] {
   .hover-overlay-view-container::before,
   .hover-overlay-view-container::after {
     border-top-width: var(--hover-arrow-size);
@@ -94,7 +94,7 @@ atom-overlay[data-overlay-position="above"] {
    hangs inside turns native selection off for everything below it, and the
    code blocks are editors that turn it off again on their own account. */
 .hover-overlay-view,
-.hover-overlay-view atom-text-editor {
+.hover-overlay-view lumine-text-editor {
   user-select: text;
 }
 
@@ -112,7 +112,7 @@ atom-overlay[data-overlay-position="above"] {
    little below it, and the border frames it so the change of background reads
    as a block rather than as a seam. */
 .hover-overlay-view pre,
-.hover-overlay-view atom-text-editor {
+.hover-overlay-view lumine-text-editor {
   padding: 0.3em 0.5em;
   border: 1px solid var(--overlay-border-color);
   border-radius: var(--component-border-radius);
@@ -138,11 +138,11 @@ atom-overlay[data-overlay-position="above"] {
 }
 
 /* Read-only editors standing in for fenced code blocks. */
-.hover-overlay-view atom-text-editor {
+.hover-overlay-view lumine-text-editor {
   margin: 0 0 0.5rem;
 }
 
-.hover-overlay-view atom-text-editor:last-child {
+.hover-overlay-view lumine-text-editor:last-child {
   margin-bottom: 0;
 }
 
@@ -178,6 +178,6 @@ atom-overlay[data-overlay-position="above"] {
 }
 
 /* The buffer range the hover information refers to. */
-atom-text-editor .highlight.hover-highlight-region .region {
+lumine-text-editor .highlight.hover-highlight-region .region {
   background-color: color-mix(in srgb, var(--syntax-text-color) 8%, transparent);
 }
