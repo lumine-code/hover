@@ -42,6 +42,16 @@
   margin-bottom: -1px;
 }
 
+/* Pushed off its line to clear another overlay, the tooltip is no longer
+   beside the word it explains, so the arrow would point at whatever sits
+   between them. */
+lumine-overlay[data-overlay-displaced] {
+  .hover-overlay-view-container::before,
+  .hover-overlay-view-container::after {
+    content: none;
+  }
+}
+
 lumine-overlay[data-overlay-position="above"] {
   .hover-overlay-view-container::before,
   .hover-overlay-view-container::after {
