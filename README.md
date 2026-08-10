@@ -2,7 +2,7 @@
 
 Show documentation tooltips and signature help at the cursor.
 
-Hover information and signature help come from provider packages — typically language-server backends — and are shown as overlay decorations right in the text editor.
+Hover information and signature help come from provider packages — typically language-server backends — and are shown as overlay decorations in pane editors and registered embedded editors such as notebook cells.
 
 ## Features
 

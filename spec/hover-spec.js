@@ -70,13 +70,13 @@ describe("hover", () => {
     for (const open of lumine.workspace.getTextEditors()) open.destroy();
   });
 
-  function addHoverProvider(hover) {
+  function addHoverProvider(hover, targetEditor = editor) {
     const provider = {
       name: "Hover Stub",
       packageName: "hover-spec",
       priority: 1,
       get grammarScopes() {
-        return [editor.getGrammar().scopeName];
+        return [targetEditor.getGrammar().scopeName];
       },
       hover,
     };
@@ -90,13 +90,14 @@ describe("hover", () => {
       .and.callFake(async () => structuredClone(SIGNATURE_HELP)),
     triggerCharacters = () => new Set(["("]),
     retriggerCharacters = () => new Set([","]),
+    targetEditor = editor,
   } = {}) {
     const provider = {
       name: "Signature Stub",
       packageName: "hover-spec",
       priority: 1,
       get grammarScopes() {
-        return [editor.getGrammar().scopeName];
+        return [targetEditor.getGrammar().scopeName];
       },
       get triggerCharacters() {
         return triggerCharacters();
@@ -108,6 +109,24 @@ describe("hover", () => {
     };
     disposables.add(mainModule.consumeHoverSignature(provider));
     return provider;
+  }
+
+  function addRegisteredEditor(role = "fragment", text = "add\n") {
+    const targetEditor = lumine.workspace.buildTextEditor({ mini: false });
+    targetEditor.setGrammar(editor.getGrammar());
+    targetEditor.setText(text);
+    const targetView = lumine.views.getView(targetEditor);
+    targetView.style.height = "100px";
+    jasmine.attachToDOM(targetView);
+    const registration = lumine.textEditors.add(targetEditor, { role });
+    disposables.add(
+      new Disposable(() => {
+        registration.dispose();
+        if (!targetEditor.isDestroyed()) targetEditor.destroy();
+        targetView.remove();
+      }),
+    );
+    return { editor: targetEditor, view: targetView, registration };
   }
 
   // Where a buffer position sits in the editor's content coordinates. The
@@ -152,6 +171,90 @@ describe("hover", () => {
       }),
     );
   }
+
+  describe("registered embedded editors", () => {
+    it("shows pointer and command hover in a fragment editor outside a workspace pane", async () => {
+      const fragment = addRegisteredEditor();
+      const hover = jasmine.createSpy("hover").and.resolveTo({
+        range: [
+          [0, 0],
+          [0, 3],
+        ],
+        contents: { kind: "markdown", value: "fragment docs" },
+      });
+      addHoverProvider(hover, fragment.editor);
+
+      movePointerTo(pixelFor([0, 1], fragment.editor), fragment.editor);
+      advanceClock(showDelay);
+      await microtasks();
+
+      expect(hover).toHaveBeenCalled();
+      expect(hover.calls.mostRecent().args[0]).toBe(fragment.editor);
+      expect(overlayItem(fragment.editor).textContent).toContain("fragment docs");
+
+      lumine.commands.dispatch(fragment.view, "hover:dismiss");
+      fragment.editor.setCursorBufferPosition([0, 1]);
+      lumine.commands.dispatch(fragment.view, "hover:toggle");
+      await microtasks();
+
+      expect(hover.calls.count()).toBe(2);
+      expect(overlayDecorations(fragment.editor).length).toBe(1);
+    });
+
+    it("shows signature help while typing in a registered fragment", async () => {
+      const fragment = addRegisteredEditor("fragment", "add");
+      const provider = addSignatureProvider({ targetEditor: fragment.editor });
+      fragment.view.focus();
+      fragment.editor.setCursorBufferPosition([0, 3]);
+      await microtasks();
+
+      fragment.editor.insertText("(");
+      await microtasks();
+
+      expect(provider.getSignature).toHaveBeenCalled();
+      expect(provider.getSignature.calls.mostRecent().args[0]).toBe(fragment.editor);
+      expect(overlayItem(fragment.editor).querySelector(".hover-signature").textContent).toBe(
+        "add(a: number, b: number): number",
+      );
+    });
+
+    it("stops watching a fragment when it is unregistered or destroyed", async () => {
+      const unregistered = addRegisteredEditor();
+      addHoverProvider(
+        async () => ({ contents: { kind: "plaintext", value: "registered docs" } }),
+        unregistered.editor,
+      );
+      expect(mainModule.overlayManager.editorWatches.has(unregistered.editor)).toBe(true);
+      lumine.commands.dispatch(unregistered.view, "hover:toggle");
+      await microtasks();
+      expect(overlayDecorations(unregistered.editor).length).toBe(1);
+
+      unregistered.registration.dispose();
+      expect(mainModule.overlayManager.editorWatches.has(unregistered.editor)).toBe(false);
+      expect(overlayDecorations(unregistered.editor).length).toBe(0);
+
+      const destroyed = addRegisteredEditor();
+      expect(mainModule.overlayManager.editorWatches.has(destroyed.editor)).toBe(true);
+
+      destroyed.editor.destroy();
+      expect(mainModule.overlayManager.editorWatches.has(destroyed.editor)).toBe(false);
+    });
+
+    it("does not watch or build a view for a background editor", () => {
+      const background = lumine.workspace.buildTextEditor({ mini: false });
+      const getView = spyOn(lumine.views, "getView").and.callThrough();
+      const registration = lumine.textEditors.add(background, { role: "background" });
+      disposables.add(
+        new Disposable(() => {
+          registration.dispose();
+          if (!background.isDestroyed()) background.destroy();
+        }),
+      );
+
+      expect(mainModule.overlayManager.editorWatches.has(background)).toBe(false);
+      expect(getView).not.toHaveBeenCalledWith(background);
+    });
+  });
 
   describe("hover tooltips", () => {
     it("shows rendered markdown from the provider for hover:toggle, and toggles it away", async () => {
