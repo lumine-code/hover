@@ -18,7 +18,7 @@ Hover information and signature help come from provider packages — typically l
 
 ## Installation
 
-To install `hover` search for _hover_ in the Install pane of the Lumine settings or run `lumine --install lumine-code/hover`.
+To install `hover` search for it in the Install pane of the Lumine settings, or run the command `lumine --install lumine-code/hover`.
 
 ## Commands
 
@@ -43,8 +43,8 @@ The overlay appearance can be tweaked from your `styles.css`:
 
 ## Services
 
-- **[hover.provider](docs/hover.provider.md)** (`^1.0.0`): consumed to request documentation for a buffer position from providers such as IDE backend packages.
-- **[hover.signature-provider](docs/hover.signature-provider.md)** (`^1.0.0`): consumed to request signature help while typing function arguments.
+- [`hover.provider`](docs/hover.provider.md): consumed to request documentation for a buffer position from providers such as IDE backend packages.
+- [`hover.signature-provider`](docs/hover.signature-provider.md): consumed to request signature help while typing function arguments.
 
 ## Contributing
 
