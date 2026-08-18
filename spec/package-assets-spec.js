@@ -12,25 +12,25 @@ const exists = (rel) => fs.existsSync(path.join(root, rel));
 // services are dropped.
 describe("hover package assets", () => {
   it("ships the keymap as JSON, not CSON", () => {
-    expect(exists("keymaps/hover.json")).toBe(true);
+    expect(exists("keymaps/main.json")).toBe(true);
     expect(exists("keymaps/hover.cson")).toBe(false);
     expect(exists("keymaps/pulsar-hover.cson")).toBe(false);
     expect(exists("keymaps/pulsar-hover.json")).toBe(false);
   });
 
   it("uses the hover: command prefix and escape dismissal in the keymap", () => {
-    const keymap = JSON.parse(read("keymaps/hover.json"));
+    const keymap = JSON.parse(read("keymaps/main.json"));
     expect(keymap["lumine-text-editor"]["cmdorctrl-alt-h"]).toBe("hover:toggle");
     expect(keymap["lumine-text-editor"]["cmdorctrl-alt-j"]).toBe("hover:toggle-signature-help");
     expect(keymap["lumine-text-editor.hover-active"]["escape"]).toBe("hover:dismiss");
-    expect(read("keymaps/hover.json")).not.toContain("pulsar-hover:");
+    expect(read("keymaps/main.json")).not.toContain("pulsar-hover:");
   });
 
   it("ships a CSS stylesheet built on custom properties, not Less", () => {
-    expect(exists("styles/hover.css")).toBe(true);
+    expect(exists("styles/main.css")).toBe(true);
     expect(exists("styles/hover.less")).toBe(false);
     expect(exists("styles/pulsar-hover.less")).toBe(false);
-    const css = read("styles/hover.css");
+    const css = read("styles/main.css");
     expect(css).toContain(".hover-overlay-view-container");
     expect(css).toContain(".hover-active-parameter");
     expect(css).toContain("var(--");
