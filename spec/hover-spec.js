@@ -1,5 +1,6 @@
 const path = require("path");
 const { CompositeDisposable, Disposable } = require("lumine");
+const { renderHoverContent } = require("../lib/render");
 
 const packageRoot = path.join(__dirname, "..");
 
@@ -38,6 +39,20 @@ const SIGNATURE_HELP = {
   activeSignature: 0,
   activeParameter: 0,
 };
+
+describe("realm-local rendering", () => {
+  it("builds hover content in the requested editor document", async () => {
+    const frame = document.createElement("iframe");
+    document.body.appendChild(frame);
+    const element = await renderHoverContent(
+      { kind: "plaintext", value: "secondary surface" },
+      frame.contentDocument,
+    );
+    expect(element.ownerDocument).toBe(frame.contentDocument);
+    expect(element.querySelector(".hover-section").ownerDocument).toBe(frame.contentDocument);
+    frame.remove();
+  });
+});
 
 describe("hover", () => {
   let mainModule;
