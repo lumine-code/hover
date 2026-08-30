@@ -173,6 +173,7 @@ describe("hover", () => {
   // the component reads back out of it.
   function movePointerTo({ left, top }, targetEditor = editor) {
     const targetView = lumine.views.getView(targetEditor);
+    const MouseEvent = targetView.ownerDocument.defaultView.MouseEvent;
     const component = targetView.getComponent();
     component.updateSync();
     const screenRow = component.screenPositionForPixelPosition({ left, top }).row;
@@ -188,6 +189,63 @@ describe("hover", () => {
   }
 
   describe("registered embedded editors", () => {
+    it("keeps pointer hover in the editor's current document after it moves surfaces", async () => {
+      const frame = document.createElement("iframe");
+      document.body.appendChild(frame);
+
+      const fragment = addRegisteredEditor();
+      disposables.add(new Disposable(() => frame.remove()));
+      frame.contentDocument.adoptNode(fragment.view);
+      frame.contentDocument.body.appendChild(fragment.view);
+      const hover = jasmine.createSpy("hover").and.resolveTo({
+        range: [
+          [0, 0],
+          [0, 3],
+        ],
+        contents: { kind: "plaintext", value: "detached docs" },
+      });
+      addHoverProvider(hover, fragment.editor);
+
+      movePointerTo(pixelFor([0, 1], fragment.editor), fragment.editor);
+      advanceClock(showDelay);
+      await microtasks();
+
+      expect(hover).toHaveBeenCalled();
+      expect(overlayItem(fragment.editor).ownerDocument).toBe(frame.contentDocument);
+      expect(overlayItem(fragment.editor).textContent).toContain("detached docs");
+
+      const transition = await lumine.workspace.windowSurfaceTransitions.begin({
+        item: fragment.editor,
+        from: {
+          id: "detached",
+          kind: "detached-pane",
+          window: frame.contentWindow,
+          document: frame.contentDocument,
+          element: frame.contentDocument.body,
+        },
+        to: {
+          id: "primary",
+          kind: "primary",
+          window,
+          document,
+          element: lumine.views.getView(lumine.workspace),
+        },
+        reason: "attach",
+      });
+      expect(overlayDecorations(fragment.editor).length).toBe(0);
+
+      document.adoptNode(fragment.view);
+      document.body.appendChild(fragment.view);
+      await transition.commit();
+      transition.complete();
+
+      movePointerTo(pixelFor([0, 1], fragment.editor), fragment.editor);
+      advanceClock(showDelay);
+      await microtasks();
+      expect(hover.calls.count()).toBe(2);
+      expect(overlayItem(fragment.editor).ownerDocument).toBe(document);
+    });
+
     it("shows pointer and command hover in a fragment editor outside a workspace pane", async () => {
       const fragment = addRegisteredEditor();
       const hover = jasmine.createSpy("hover").and.resolveTo({
