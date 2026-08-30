@@ -264,7 +264,6 @@ describe("hover", () => {
       fragment.view.getComponent().updateSync();
 
       const item = overlayItem(fragment.editor);
-      frame.contentDocument.body.appendChild(item);
       const focusTarget = frame.contentDocument.createElement("button");
       item.appendChild(focusTarget);
       spyOnProperty(frame.contentDocument, "activeElement", "get").and.returnValue(focusTarget);
