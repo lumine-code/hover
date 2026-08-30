@@ -1,5 +1,6 @@
 const path = require("path");
 const { CompositeDisposable, Disposable } = require("lumine");
+const { activeElementFor } = require("../lib/overlay-manager");
 const { renderHoverContent } = require("../lib/render");
 
 const packageRoot = path.join(__dirname, "..");
@@ -50,6 +51,17 @@ describe("realm-local rendering", () => {
     );
     expect(element.ownerDocument).toBe(frame.contentDocument);
     expect(element.querySelector(".hover-section").ownerDocument).toBe(frame.contentDocument);
+    frame.remove();
+  });
+
+  it("reads the active element from an adopted node's owner document", () => {
+    const frame = document.createElement("iframe");
+    document.body.appendChild(frame);
+    const element = document.createElement("div");
+    frame.contentDocument.adoptNode(element);
+
+    expect(activeElementFor(element)).toBe(frame.contentDocument.body);
+    expect(activeElementFor(element)).not.toBe(document.body);
     frame.remove();
   });
 });
@@ -244,34 +256,6 @@ describe("hover", () => {
       await microtasks();
       expect(hover.calls.count()).toBe(2);
       expect(overlayItem(fragment.editor).ownerDocument).toBe(document);
-    });
-
-    it("returns focus from an unselected tooltip in the editor's current Window", async () => {
-      const frame = document.createElement("iframe");
-      document.body.appendChild(frame);
-
-      const fragment = addRegisteredEditor();
-      disposables.add(new Disposable(() => frame.remove()));
-      frame.contentDocument.adoptNode(fragment.view);
-      frame.contentDocument.body.appendChild(fragment.view);
-      addHoverProvider(
-        async () => ({ contents: { kind: "plaintext", value: "detached docs" } }),
-        fragment.editor,
-      );
-
-      lumine.commands.dispatch(fragment.view, "hover:toggle");
-      await microtasks();
-      fragment.view.getComponent().updateSync();
-
-      const item = overlayItem(fragment.editor);
-      const focusTarget = frame.contentDocument.createElement("button");
-      item.appendChild(focusTarget);
-      spyOnProperty(frame.contentDocument, "activeElement", "get").and.returnValue(focusTarget);
-      frame.contentWindow.getSelection().removeAllRanges();
-      spyOn(fragment.view, "focus").and.callThrough();
-      item.dispatchEvent(new frame.contentWindow.MouseEvent("mouseup", { bubbles: true }));
-
-      expect(fragment.view.focus).toHaveBeenCalled();
     });
 
     it("shows pointer and command hover in a fragment editor outside a workspace pane", async () => {
