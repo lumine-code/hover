@@ -246,6 +246,35 @@ describe("hover", () => {
       expect(overlayItem(fragment.editor).ownerDocument).toBe(document);
     });
 
+    it("returns focus from an unselected tooltip in the editor's current Window", async () => {
+      const frame = document.createElement("iframe");
+      document.body.appendChild(frame);
+
+      const fragment = addRegisteredEditor();
+      disposables.add(new Disposable(() => frame.remove()));
+      frame.contentDocument.adoptNode(fragment.view);
+      frame.contentDocument.body.appendChild(fragment.view);
+      addHoverProvider(
+        async () => ({ contents: { kind: "plaintext", value: "detached docs" } }),
+        fragment.editor,
+      );
+
+      lumine.commands.dispatch(fragment.view, "hover:toggle");
+      await microtasks();
+      fragment.view.getComponent().updateSync();
+
+      const item = overlayItem(fragment.editor);
+      frame.contentDocument.body.appendChild(item);
+      const focusTarget = frame.contentDocument.createElement("button");
+      item.appendChild(focusTarget);
+      spyOnProperty(frame.contentDocument, "activeElement", "get").and.returnValue(focusTarget);
+      frame.contentWindow.getSelection().removeAllRanges();
+      spyOn(fragment.view, "focus").and.callThrough();
+      item.dispatchEvent(new frame.contentWindow.MouseEvent("mouseup", { bubbles: true }));
+
+      expect(fragment.view.focus).toHaveBeenCalled();
+    });
+
     it("shows pointer and command hover in a fragment editor outside a workspace pane", async () => {
       const fragment = addRegisteredEditor();
       const hover = jasmine.createSpy("hover").and.resolveTo({
