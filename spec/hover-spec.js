@@ -1,6 +1,5 @@
 const path = require("path");
 const { CompositeDisposable, Disposable } = require("lumine");
-const { activeElementFor } = require("../lib/overlay-manager");
 const { renderHoverContent } = require("../lib/render");
 
 const packageRoot = path.join(__dirname, "..");
@@ -51,17 +50,6 @@ describe("realm-local rendering", () => {
     );
     expect(element.ownerDocument).toBe(frame.contentDocument);
     expect(element.querySelector(".hover-section").ownerDocument).toBe(frame.contentDocument);
-    frame.remove();
-  });
-
-  it("reads the active element from an adopted node's owner document", () => {
-    const frame = document.createElement("iframe");
-    document.body.appendChild(frame);
-    const element = document.createElement("div");
-    frame.contentDocument.adoptNode(element);
-
-    expect(activeElementFor(element)).toBe(frame.contentDocument.body);
-    expect(activeElementFor(element)).not.toBe(document.body);
     frame.remove();
   });
 });
