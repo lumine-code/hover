@@ -240,19 +240,23 @@ describe("hover", () => {
       expect(mainModule.overlayManager.editorWatches.has(destroyed.editor)).toBe(false);
     });
 
-    it("does not watch or build a view for a background editor", () => {
-      const background = lumine.workspace.buildTextEditor({ mini: false });
+    it("ignores an unregistered hidden editor without building its view", () => {
+      const hidden = lumine.workspace.buildTextEditor({ mini: false });
       const getView = spyOn(lumine.views, "getView").and.callThrough();
-      const registration = lumine.textEditors.add(background, { role: "background" });
       disposables.add(
         new Disposable(() => {
-          registration.dispose();
-          if (!background.isDestroyed()) background.destroy();
+          if (!hidden.isDestroyed()) hidden.destroy();
         }),
       );
 
-      expect(mainModule.overlayManager.editorWatches.has(background)).toBe(false);
-      expect(getView).not.toHaveBeenCalledWith(background);
+      expect(mainModule.overlayManager.editorWatches.has(hidden)).toBe(false);
+      expect(getView).not.toHaveBeenCalledWith(hidden);
+    });
+
+    it("watches a registered viewer as a normal surface", () => {
+      const viewer = addRegisteredEditor("viewer");
+
+      expect(mainModule.overlayManager.editorWatches.has(viewer.editor)).toBe(true);
     });
   });
 
