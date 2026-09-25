@@ -62,7 +62,9 @@ describe("hover package assets", () => {
     expect(pkg.consumedServices["hover.signature-provider"].versions["^1.0.0"]).toBe(
       "consumeHoverSignature",
     );
-    expect(pkg.providedServices).toBeUndefined();
+    expect(pkg.providedServices["background-tips.provider"].versions["1.0.0"]).toBe(
+      "provideBackgroundTips",
+    );
   });
 
   it("defines the config schema under the hover namespace without order keys", () => {
