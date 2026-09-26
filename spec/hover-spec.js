@@ -805,6 +805,29 @@ describe("hover", () => {
       expect(item.getBoundingClientRect().width).toBeGreaterThan(100);
     });
 
+    it("sizes an embedded code editor when global soft wrap is enabled", async () => {
+      const previousSoftWrap = lumine.config.get("editor.softWrap");
+      lumine.config.set("editor.softWrap", true);
+      disposables.add(new Disposable(() => lumine.config.set("editor.softWrap", previousSoftWrap)));
+      const code = "function wrappedHoverCode(a, b) {}";
+      addHoverProvider(async () => ({
+        contents: { kind: "markdown", value: `\`\`\`js\n${code}\n\`\`\`` },
+      }));
+
+      lumine.commands.dispatch(editorView, "hover:toggle");
+      await microtasks();
+
+      const item = overlayItem(editor);
+      const embedded = item.querySelector("lumine-text-editor");
+      const model = embedded.getModel();
+      expect(model.isSoftWrapped()).toBe(true);
+      expect(model.displayLayer.softWrapColumn).toBe(model.maxScreenLineLength);
+      expect(model.getScreenLineCount()).toBe(1);
+      expect(model.lineTextForScreenRow(0)).toBe(code);
+      embedded.getComponent().updateSync();
+      expect(item.getBoundingClientRect().width).toBeGreaterThan(100);
+    });
+
     it("renders plaintext contents literally and keeps raw HTML in markdown as text", async () => {
       addHoverProvider(async () => ({
         contents: { kind: "plaintext", value: "a < b & c" },
