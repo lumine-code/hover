@@ -861,6 +861,108 @@ describe("hover", () => {
     });
   });
 
+  for (const type of ["hover", "signature-help"]) {
+    describe(`${type} scrolling`, () => {
+      let item;
+      let content;
+      let editorWheel;
+
+      beforeEach(async () => {
+        const previousScrollChaining = lumine.config.get("hover.scrollChaining");
+        disposables.add(
+          new Disposable(() => lumine.config.set("hover.scrollChaining", previousScrollChaining)),
+        );
+        const documentation = "Scrolling documentation.\n\n".repeat(50);
+        if (type === "hover") {
+          addHoverProvider(async () => ({
+            contents: { kind: "plaintext", value: documentation },
+          }));
+        } else {
+          const help = structuredClone(SIGNATURE_HELP);
+          help.signatures[0].parameters[0].documentation = documentation;
+          addSignatureProvider({ getSignature: async () => help });
+        }
+        lumine.commands.dispatch(
+          editorView,
+          `hover:toggle${type === "hover" ? "" : "-signature-help"}`,
+        );
+        await microtasks();
+
+        item = overlayItem(editor);
+        content = item.querySelector(".hover-overlay-view");
+        content.style.maxHeight = "40px";
+        editorView.getComponent().updateSync();
+        expect(item.isConnected).toBe(true);
+        expect(content.scrollHeight).toBeGreaterThan(content.clientHeight);
+
+        editorWheel = jasmine.createSpy("editorWheel");
+        editorView.addEventListener("wheel", editorWheel);
+        disposables.add(new Disposable(() => editorView.removeEventListener("wheel", editorWheel)));
+      });
+
+      function wheel(deltaY, deltaX = 0) {
+        editorWheel.calls.reset();
+        const event = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY, deltaX });
+        content.firstElementChild.dispatchEvent(event);
+        return event;
+      }
+
+      it("keeps scrolling inside the overlay by default, including at its boundaries", () => {
+        expect(lumine.config.get("hover.scrollChaining")).toBe(false);
+        for (const [scrollTop, deltaY, deltaX] of [
+          [0, -100, 0],
+          [10, 100, 0],
+          [content.scrollHeight, 100, 0],
+          [0, 0, 100],
+        ]) {
+          content.scrollTop = scrollTop;
+          expect(wheel(deltaY, deltaX).defaultPrevented).toBe(false);
+          expect(editorWheel).not.toHaveBeenCalled();
+        }
+
+        content.style.maxHeight = "none";
+        expect(content.scrollHeight).toBe(content.clientHeight);
+        expect(wheel(100).defaultPrevented).toBe(false);
+        expect(editorWheel).not.toHaveBeenCalled();
+      });
+
+      it("passes scrolling to the editor only when enabled and the content cannot move", () => {
+        lumine.config.set("hover.scrollChaining", true);
+        for (const [scrollTop, deltaY, reachesEditor] of [
+          [0, -100, true],
+          [0, 100, false],
+          [content.scrollHeight, 100, true],
+          [content.scrollHeight, -100, false],
+        ]) {
+          content.scrollTop = scrollTop;
+          const event = wheel(deltaY);
+          expect(editorWheel.calls.count()).toBe(reachesEditor ? 1 : 0);
+          if (!reachesEditor) expect(event.defaultPrevented).toBe(false);
+        }
+
+        content.style.maxHeight = "none";
+        expect(content.scrollHeight).toBe(content.clientHeight);
+        wheel(100);
+        expect(editorWheel).toHaveBeenCalledTimes(1);
+      });
+
+      it("applies setting changes to an already open overlay", () => {
+        content.scrollTop = content.scrollHeight;
+        wheel(100);
+        expect(editorWheel).not.toHaveBeenCalled();
+
+        lumine.config.set("hover.scrollChaining", true);
+        wheel(100);
+        expect(editorWheel).toHaveBeenCalledTimes(1);
+
+        lumine.config.set("hover.scrollChaining", false);
+        wheel(100);
+        expect(editorWheel).not.toHaveBeenCalled();
+        expect(overlayItem(editor)).toBe(item);
+      });
+    });
+  }
+
   describe("signature help", () => {
     it("shows the active signature when a trigger character is typed", async () => {
       const provider = addSignatureProvider();

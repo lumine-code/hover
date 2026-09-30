@@ -73,11 +73,14 @@ describe("hover package assets", () => {
     expect(Object.keys(schema).sort()).toEqual([
       "hideDelay",
       "includeSignatureDocumentation",
+      "scrollChaining",
       "showDelay",
       "showOnCursorMove",
       "showOnMouseMove",
       "showSignatureWhileTyping",
     ]);
+    expect(schema.scrollChaining.type).toBe("boolean");
+    expect(schema.scrollChaining.default).toBe(false);
     for (const entry of Object.values(schema)) {
       expect(entry.order).toBeUndefined();
       expect(entry.title).toBeDefined();
