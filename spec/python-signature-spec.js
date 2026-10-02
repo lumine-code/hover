@@ -1,4 +1,4 @@
-describe("Python class signatures in hover documentation", () => {
+describe("Python signatures in hover documentation", () => {
   let items, renderHoverContent;
 
   beforeEach(async () => {
@@ -79,6 +79,65 @@ describe("Python class signatures in hover documentation", () => {
 
   it("leaves real class declarations as embedded Python editors", async () => {
     const source = "class Derived(Base):\n    pass";
+    const item = await render(source);
+    const editor = item.querySelector("lumine-text-editor").getModel();
+    expect(editor.getText()).toBe(source);
+    expect(editor.getGrammar().scopeName).toBe("source.python");
+  });
+
+  it("assigns Python definition scopes to labeled method signatures", async () => {
+    const source = `(method) def _cache_input(
+    mechanics: MechanicsSnapshot,
+    family_batches: Mapping[str, FamilyInputBatch],
+    point_idxs: IntArray | None = None
+) -> CacheInput`;
+    const item = await render(source);
+    const signature = item.querySelector("pre");
+    expect(signature).not.toBeNull();
+    if (!signature) return;
+    expect(signature.textContent).toBe(source);
+    expect(signature.querySelector(".syntax--storage.syntax--function").textContent).toBe("def");
+    expect(
+      signature.querySelector(".syntax--entity.syntax--name.syntax--function").textContent,
+    ).toBe("_cache_input");
+    expect(
+      [...signature.querySelectorAll(".syntax--variable.syntax--parameter.syntax--function")].map(
+        (span) => span.textContent,
+      ),
+    ).toEqual(["mechanics", "family_batches", "point_idxs"]);
+    expect(signature.querySelector(".syntax--function-annotation").textContent).toBe("->");
+    expect(
+      [...signature.querySelectorAll(".syntax--support.syntax--storage.syntax--type")].some(
+        (span) => span.textContent === "CacheInput",
+      ),
+    ).toBe(true);
+  });
+
+  it("uses the same grammar for function signatures with optional labels and async", async () => {
+    for (const source of [
+      "def calculate(α: float) -> float",
+      "(function) def calculate(α: float) -> float",
+      "(method) async def calculate(α: float) -> float",
+    ]) {
+      const signature = (await render(source)).querySelector("pre");
+      expect(signature).withContext(source).not.toBeNull();
+      if (!signature) continue;
+      expect(signature.textContent).toBe(source);
+      expect(signature.querySelector(".syntax--storage.syntax--function").textContent).toBe("def");
+      expect(
+        signature.querySelector(".syntax--entity.syntax--name.syntax--function").textContent,
+      ).toBe("calculate");
+      expect(
+        signature.querySelector(".syntax--variable.syntax--parameter.syntax--function").textContent,
+      ).toBe("α");
+      if (source.includes("async")) {
+        expect(signature.querySelector(".syntax--keyword.syntax--async").textContent).toBe("async");
+      }
+    }
+  });
+
+  it("keeps complete function declarations on the ordinary Python renderer", async () => {
+    const source = "def calculate(value: float) -> float:\n    return value";
     const item = await render(source);
     const editor = item.querySelector("lumine-text-editor").getModel();
     expect(editor.getText()).toBe(source);
