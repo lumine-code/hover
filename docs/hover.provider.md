@@ -36,7 +36,17 @@ type HoverProvider = {
 };
 
 type Hover = {
-  contents: { value: string; kind?: "markdown" | "plaintext" } | { element: HTMLElement };
+  contents:
+    | {
+        value: string;
+        kind?: "markdown" | "plaintext";
+        renderCodeBlock?(block: {
+          text: string;
+          language: string | undefined;
+          scopeName: string;
+        }): HTMLElement | null | Promise<HTMLElement | null>;
+      }
+    | { element: HTMLElement };
   range?: Range;
 };
 ```
@@ -51,6 +61,8 @@ type Hover = {
 The result must carry either `contents.value` or `contents.element` — neither means declining. `range` is what the overlay highlights and what it uses to decide whether the pointer has moved out of the answer.
 
 Return `contents.element` when the answer is not prose. A linter message carries a severity, a rule name and a fix; flattened into markdown all three become text. The tooltip supplies the surface and every rule about when it appears and goes; what stands on it is yours, and its padding is yours too — the popover drops its own for a provided element. The element is dropped with the overlay, so build a fresh one per call and hang nothing off it that needs disposing.
+
+`contents.renderCodeBlock` optionally renders an individual Markdown fence, for providers whose code blocks describe symbols rather than contain valid source. It receives the original text without the final fence newline, the fence's language identifier, and its resolved grammar scope (`text.plain` when unknown). Return a fresh element with no resources that require disposal, or `null` to use the normal embedded editor. A rejected or throwing callback also falls back to the normal renderer. Prose and other fences keep their normal rendering; plain-text answers never call it. The callback is local provider code, never executable content supplied by a language server.
 
 ## Gutter hovers
 
