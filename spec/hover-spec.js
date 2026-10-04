@@ -1,5 +1,5 @@
 const path = require("path");
-const { CompositeDisposable, Disposable } = require("lumine");
+const { CompositeDisposable, Disposable, Point } = require("lumine");
 
 const packageRoot = path.join(__dirname, "..");
 
@@ -41,6 +41,7 @@ const SIGNATURE_HELP = {
 
 describe("hover", () => {
   let mainModule;
+  let contextHelpModule;
   let editor;
   let editorView;
   let disposables;
@@ -51,6 +52,10 @@ describe("hover", () => {
     jasmine.attachToDOM(lumine.views.getView(lumine.workspace));
     disposables = new CompositeDisposable();
 
+    const helpPack = await lumine.packages.activatePackage(
+      path.join(packageRoot, "..", "documentation-view"),
+    );
+    contextHelpModule = helpPack.mainModule;
     const pack = await lumine.packages.activatePackage(packageRoot);
     mainModule = pack.mainModule;
     showDelay = lumine.config.get("hover.showDelay");
@@ -67,6 +72,7 @@ describe("hover", () => {
   afterEach(async () => {
     disposables.dispose();
     await lumine.packages.deactivatePackage("hover");
+    await lumine.packages.deactivatePackage("documentation-view");
     for (const open of lumine.workspace.getTextEditors()) open.destroy();
   });
 
@@ -78,9 +84,9 @@ describe("hover", () => {
       get grammarScopes() {
         return [targetEditor.getGrammar().scopeName];
       },
-      hover,
+      getHelp: hover,
     };
-    disposables.add(mainModule.consumeHover(provider));
+    disposables.add(contextHelpModule.consumeContextHelp(provider));
     return provider;
   }
 
@@ -171,6 +177,247 @@ describe("hover", () => {
       }),
     );
   }
+
+  describe("shared context help lifecycle", () => {
+    it("does not mount a request that completes after dismissal", async () => {
+      let resolveHelp;
+      let signal;
+      addHoverProvider(
+        (_editor, _position, context) =>
+          new Promise((resolve) => {
+            resolveHelp = resolve;
+            signal = context.signal;
+          }),
+      );
+      lumine.commands.dispatch(editorView, "hover:toggle");
+      await microtasks();
+      lumine.commands.dispatch(editorView, "hover:dismiss");
+      expect(signal.aborted).toBe(true);
+      resolveHelp({ contents: { kind: "markdown", value: "late docs" } });
+      await microtasks();
+      expect(overlayItem(editor)).toBeNull();
+    });
+
+    it("keeps the newer request when an older provider finishes last", async () => {
+      const answers = [];
+      addHoverProvider(
+        () =>
+          new Promise((resolve) => {
+            answers.push(resolve);
+          }),
+      );
+      const manager = mainModule.overlayManager;
+      const older = manager.showHoverOverlay(editor, new Point(0, 0));
+      await microtasks();
+      const newer = manager.showHoverOverlay(editor, new Point(0, 1));
+      await microtasks();
+      answers[1]({ contents: { kind: "markdown", value: "newer docs" } });
+      await newer;
+      answers[0]({ contents: { kind: "markdown", value: "older docs" } });
+      await older;
+      expect(overlayItem(editor).textContent).toContain("newer docs");
+      expect(overlayItem(editor).textContent).not.toContain("older docs");
+    });
+
+    it("disposes a rendered node when dismissal wins the rendering race", async () => {
+      addHoverProvider(async () => ({ contents: { kind: "markdown", value: "docs" } }));
+      let finishRender;
+      const dispose = jasmine.createSpy("dispose rendered content");
+      const manager = mainModule.overlayManager;
+      const registry = manager.contextHelp;
+      disposables.add(
+        mainModule.consumeContextHelp({
+          request: (...args) => registry.request(...args),
+          render: () =>
+            new Promise((resolve) => {
+              finishRender = resolve;
+            }),
+        }),
+      );
+      lumine.commands.dispatch(editorView, "hover:toggle");
+      await microtasks();
+      lumine.commands.dispatch(editorView, "hover:dismiss");
+      finishRender({ element: document.createElement("div"), dispose });
+      await microtasks();
+      expect(dispose).toHaveBeenCalledTimes(1);
+      expect(overlayItem(editor)).toBeNull();
+    });
+
+    it("cancels requests when the source editor is destroyed", async () => {
+      let resolveHelp;
+      addHoverProvider(
+        () =>
+          new Promise((resolve) => {
+            resolveHelp = resolve;
+          }),
+      );
+      lumine.commands.dispatch(editorView, "hover:toggle");
+      await microtasks();
+      editor.destroy();
+      resolveHelp({ contents: { kind: "markdown", value: "late docs" } });
+      await microtasks();
+      expect(mainModule.overlayManager.overlayElement).toBeNull();
+    });
+
+    it("cancels requests when the registry service disappears", async () => {
+      let resolveHelp;
+      addHoverProvider(
+        () =>
+          new Promise((resolve) => {
+            resolveHelp = resolve;
+          }),
+      );
+      lumine.commands.dispatch(editorView, "hover:toggle");
+      await microtasks();
+      await lumine.packages.deactivatePackage("documentation-view");
+      resolveHelp({ contents: { kind: "markdown", value: "late docs" } });
+      await microtasks();
+      expect(mainModule.overlayManager.contextHelp).toBeNull();
+      expect(overlayItem(editor)).toBeNull();
+    });
+
+    it("keeps visible signature help when the documentation registry disconnects and reconnects", async () => {
+      addSignatureProvider();
+      lumine.commands.dispatch(editorView, "hover:toggle-signature-help");
+      await microtasks();
+      const item = overlayItem(editor);
+      expect(item.querySelector(".hover-signature")).not.toBeNull();
+      await lumine.packages.deactivatePackage("documentation-view");
+      expect(mainModule.overlayManager.contextHelp).toBeNull();
+      expect(overlayItem(editor)).toBe(item);
+      await lumine.packages.activatePackage(path.join(packageRoot, "..", "documentation-view"));
+      expect(mainModule.overlayManager.contextHelp).not.toBeNull();
+      expect(overlayItem(editor)).toBe(item);
+    });
+
+    it("removes documentation without aborting a signature request already replacing it", async () => {
+      addHoverProvider(async () => ({ contents: { kind: "markdown", value: "docs" } }));
+      lumine.commands.dispatch(editorView, "hover:toggle");
+      await microtasks();
+      expect(overlayItem(editor).textContent).toContain("docs");
+      let resolveSignature;
+      addSignatureProvider({
+        getSignature: () =>
+          new Promise((resolve) => {
+            resolveSignature = resolve;
+          }),
+      });
+      lumine.commands.dispatch(editorView, "hover:toggle-signature-help");
+      await microtasks();
+      await lumine.packages.deactivatePackage("documentation-view");
+      expect(overlayItem(editor)).toBeNull();
+      resolveSignature(structuredClone(SIGNATURE_HELP));
+      await microtasks();
+      expect(overlayItem(editor).querySelector(".hover-signature")).not.toBeNull();
+    });
+
+    it("keeps a visible signature while cancelling a pending documentation request", async () => {
+      addSignatureProvider();
+      lumine.commands.dispatch(editorView, "hover:toggle-signature-help");
+      await microtasks();
+      const item = overlayItem(editor);
+      let resolveHelp;
+      addHoverProvider(
+        () =>
+          new Promise((resolve) => {
+            resolveHelp = resolve;
+          }),
+      );
+      const request = mainModule.overlayManager.showHoverOverlay(editor, new Point(0, 1));
+      await microtasks();
+      await lumine.packages.deactivatePackage("documentation-view");
+      resolveHelp({ contents: { kind: "markdown", value: "late documentation" } });
+      await request;
+      expect(overlayItem(editor)).toBe(item);
+    });
+
+    it("does not mount a provider result after the package is deactivated", async () => {
+      let resolveHelp;
+      addHoverProvider(
+        () =>
+          new Promise((resolve) => {
+            resolveHelp = resolve;
+          }),
+      );
+      lumine.commands.dispatch(editorView, "hover:toggle");
+      await microtasks();
+      const manager = mainModule.overlayManager;
+      await lumine.packages.deactivatePackage("hover");
+      resolveHelp({ contents: { kind: "markdown", value: "late docs" } });
+      await microtasks();
+      expect(manager.overlayElement).toBeNull();
+      expect(overlayItem(editor)).toBeNull();
+    });
+
+    it("lets the toolbar receive Enter without dismissing its subject first", async () => {
+      addHoverProvider(async () => ({ contents: { kind: "markdown", value: "toolbar docs" } }));
+      lumine.commands.dispatch(editorView, "hover:toggle");
+      await microtasks();
+      const item = overlayItem(editor);
+      editorView.getComponent().updateSync();
+      await frames();
+      const button = item.querySelector(".hover-open-documentation");
+      expect(button.classList.contains("icon-book")).toBe(true);
+      expect(button.textContent).toBe("");
+      expect(button.getAttribute("aria-label")).toBe("Open in Documentation View");
+      expect(button.title).toBe("Open in Documentation View");
+      expect(getComputedStyle(button.parentElement).position).toBe("absolute");
+      button.focus();
+      expect(document.activeElement).toBe(button);
+      expect(getComputedStyle(button.parentElement).opacity).toBe("1");
+      button.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      expect(overlayItem(editor)).toBe(item);
+      button.click();
+      await microtasks();
+      expect(overlayItem(editor)).toBeNull();
+      expect(lumine.workspace.getRightDock().isVisible()).toBe(true);
+    });
+
+    it("opens the same snapshot in the panel with fresh provider content", async () => {
+      const created = [];
+      const getHelp = jasmine.createSpy("getHelp").and.resolveTo({
+        contents: {
+          render() {
+            const element = document.createElement("button");
+            element.textContent = "Provider action";
+            element.addEventListener("click", () => element.classList.add("clicked"));
+            created.push(element);
+            return element;
+          },
+        },
+      });
+      addHoverProvider(getHelp);
+      lumine.commands.dispatch(editorView, "hover:toggle");
+      await microtasks();
+      const item = overlayItem(editor);
+      const button = item.querySelector(".hover-open-documentation");
+      expect(button).not.toBeNull();
+      const original = item.querySelector(".context-help-provided button");
+      button.click();
+      await microtasks();
+      expect(getHelp).toHaveBeenCalledTimes(1);
+      expect(created.length).toBe(2);
+      expect(created[0]).toBe(original);
+      expect(created[1]).not.toBe(original);
+      expect(created[1].isConnected).toBe(true);
+      created[1].click();
+      expect(created[1].classList.contains("clicked")).toBe(true);
+      expect(overlayItem(editor)).toBeNull();
+      expect(editorView.hasFocus()).toBe(true);
+    });
+
+    it("hides the panel action when the optional panel service is removed", async () => {
+      addHoverProvider(async () => ({ contents: { kind: "markdown", value: "docs" } }));
+      lumine.commands.dispatch(editorView, "hover:toggle");
+      await microtasks();
+      const manager = mainModule.overlayManager;
+      const item = overlayItem(editor);
+      expect(item.querySelector(".hover-open-documentation")).not.toBeNull();
+      manager.setContextHelpPanel(null);
+      expect(item.querySelector(".hover-open-documentation")).toBeNull();
+      expect(overlayItem(editor)).toBe(item);
+    });
+  });
 
   describe("registered embedded editors", () => {
     it("shows pointer and command hover in a fragment editor outside a workspace pane", async () => {
@@ -693,7 +940,7 @@ describe("hover", () => {
       lumine.commands.dispatch(editorView, "hover:toggle");
       await microtasks();
 
-      const sections = overlayItem(editor).querySelectorAll(".hover-section");
+      const sections = overlayItem(editor).querySelectorAll(".context-help-section");
       expect(sections.length).toBe(2);
       expect(sections[0].textContent).toContain("unused variable");
       expect(sections[1].textContent).toContain("Adds two numbers.");
@@ -705,7 +952,7 @@ describe("hover", () => {
       const built = document.createElement("div");
       built.classList.add("provider-built");
       built.textContent = "a message";
-      addHoverProvider(async () => ({ contents: { element: built } }));
+      addHoverProvider(async () => ({ contents: { render: () => built } }));
 
       lumine.commands.dispatch(editorView, "hover:toggle");
       await microtasks();
@@ -713,7 +960,41 @@ describe("hover", () => {
       const item = overlayItem(editor);
       expect(item.querySelector(".provider-built")).toBe(built);
       // The popover drops its prose padding for a section that lays out its own.
-      expect(item.querySelector(".hover-section").classList).toContain("hover-provided");
+      expect(item.querySelector(".context-help-section").classList).toContain(
+        "context-help-provided",
+      );
+    });
+
+    it("preserves tooltip scrolling, prose padding, plain-text breaks and overlay colors", async () => {
+      addHoverProvider(async () => ({
+        contents: { kind: "markdown", value: "```text\nexample\n```\n\nDocumentation." },
+      }));
+      addHoverProvider(async () => ({
+        contents: { kind: "plaintext", value: "First line\nSecond line" },
+      }));
+      lumine.commands.dispatch(editorView, "hover:toggle");
+      await microtasks();
+      const item = overlayItem(editor);
+      item.style.setProperty("--overlay-border-color", "rgb(10, 20, 30)");
+      item.style.setProperty("--component-padding", "12px");
+      editorView.getComponent().updateSync();
+      const content = item.querySelector(".context-help-content");
+      const toolbar = item.querySelector(".hover-toolbar");
+      const sections = item.querySelectorAll(".context-help-section");
+      expect(getComputedStyle(toolbar).position).toBe("absolute");
+      expect(item.offsetHeight).toBe(content.offsetHeight + 2);
+      expect(getComputedStyle(content).overflowY).toBe("auto");
+      expect(getComputedStyle(content).maxHeight).toBe("300px");
+      expect(getComputedStyle(content).userSelect).toBe("text");
+      expect(getComputedStyle(sections[0]).paddingTop).toBe("6px");
+      expect(getComputedStyle(sections[0]).paddingLeft).toBe("12px");
+      expect(getComputedStyle(sections[1]).borderTopColor).toBe("rgb(10, 20, 30)");
+      expect(getComputedStyle(content.querySelector("lumine-text-editor")).borderTopColor).toBe(
+        "rgb(10, 20, 30)",
+      );
+      expect(getComputedStyle(content.querySelector(".context-help-plaintext")).whiteSpace).toBe(
+        "pre-wrap",
+      );
     });
 
     it("asks about the row when the pointer rests on the gutter", async () => {
@@ -722,7 +1003,7 @@ describe("hover", () => {
         contents: { kind: "markdown", value: "two problems on this line" },
       }));
       const provider = addHoverProvider(hover);
-      provider.hoverGutter = hoverGutter;
+      provider.getGutterHelp = hoverGutter;
 
       // Tall enough for the second row to be reachable: the component clamps
       // a mouse event into its scroll container, and a spec editor is short.
@@ -829,20 +1110,21 @@ describe("hover", () => {
     });
 
     it("renders plaintext contents literally and keeps raw HTML in markdown as text", async () => {
-      addHoverProvider(async () => ({
+      const plainProvider = addHoverProvider(async () => ({
         contents: { kind: "plaintext", value: "a < b & c" },
       }));
       lumine.commands.dispatch(editorView, "hover:toggle");
       await microtasks();
-      expect(overlayItem(editor).querySelector(".hover-plaintext").textContent).toBe("a < b & c");
+      expect(overlayItem(editor).querySelector(".context-help-plaintext").textContent).toBe(
+        "a < b & c",
+      );
       lumine.commands.dispatch(editorView, "hover:dismiss");
 
       addHoverProvider(async () => ({
         contents: { kind: "markdown", value: "Mentions <pre> tags in prose." },
       }));
       // The first registered provider answers null so the second one is asked.
-      const providers = mainModule.overlayManager.hoverRegistry.providers;
-      providers[0].hover = async () => null;
+      plainProvider.getHelp = async () => null;
       lumine.commands.dispatch(editorView, "hover:toggle");
       await microtasks();
       const item = overlayItem(editor);

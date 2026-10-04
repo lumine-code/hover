@@ -56,9 +56,15 @@ describe("hover package assets", () => {
     expect(exists("src")).toBe(false);
   });
 
-  it("consumes hover and signature and provides no legacy services", () => {
+  it("consumes shared context help and signature and provides no legacy services", () => {
     const pkg = JSON.parse(read("package.json"));
-    expect(pkg.consumedServices["hover.provider"].versions["^1.0.0"]).toBe("consumeHover");
+    expect(pkg.consumedServices["hover.provider"]).toBeUndefined();
+    expect(pkg.consumedServices["context-help.registry"].versions["^1.0.0"]).toBe(
+      "consumeContextHelp",
+    );
+    expect(pkg.consumedServices["context-help.panel"].versions["^1.0.0"]).toBe(
+      "consumeContextHelpPanel",
+    );
     expect(pkg.consumedServices["hover.signature-provider"].versions["^1.0.0"]).toBe(
       "consumeHoverSignature",
     );

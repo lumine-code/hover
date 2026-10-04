@@ -41,9 +41,14 @@
     }
   },
   "consumedServices": {
-    "hover.provider": {
+    "context-help.registry": {
       "versions": {
-        "^1.0.0": "consumeHover"
+        "^1.0.0": "consumeContextHelp"
+      }
+    },
+    "context-help.panel": {
+      "versions": {
+        "^1.0.0": "consumeContextHelpPanel"
       }
     },
     "hover.signature-provider": {

@@ -9,7 +9,7 @@ Supplies the call signature shown while the user types arguments.
 | Consumed by | `consumeHoverSignature(provider)` returning a `Disposable` |
 | Owner       | [`hover`](https://github.com/lumine-code/hover)            |
 
-The sibling of [`hover.provider`](hover.provider.md), triggered by typing rather than by pointing. As with hover, a language server reaches this through an `ide-client` adapter rather than by implementing the service directly.
+Signature help is triggered by typing; contextual documentation is supplied separately through `context-help.provider` and shared by hover and Documentation View. A language server reaches signature help through an `ide-client` adapter rather than by implementing this service directly.
 
 ## Registration
 
@@ -92,7 +92,7 @@ A result with an empty `signatures` array is treated as declining and dismisses 
 
 `activeParameter` is what highlights the argument being typed; without it the popup shows the signature but nothing moves as the user types commas.
 
-Whether parameter documentation is rendered is a user setting (`hover.includeSignatureDocumentation`), so supply it and let the user decide.
+Parameter documentation is rendered when supplied. The `hover.includeSignatureDocumentation` setting controls whether the whole signature's documentation is also shown.
 
 The signature popup and the hover overlay share one slot: showing a signature replaces a visible hover, and vice versa.
 
