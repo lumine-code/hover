@@ -373,6 +373,85 @@ describe("hover", () => {
       expect(lumine.workspace.getRightDock().isVisible()).toBe(true);
     });
 
+    async function showInteractiveContent(tag) {
+      const clicked = jasmine.createSpy("provider action");
+      addHoverProvider(async () => ({
+        contents: {
+          render() {
+            const root = document.createElement("div");
+            const control = document.createElement(tag);
+            if (tag === "button") control.type = "button";
+            else control.href = "#diagnostic-reference";
+            control.className = "provider-source-action";
+            const label = document.createElement("span");
+            label.textContent = "Open source";
+            control.appendChild(label);
+            control.addEventListener("click", (event) => {
+              event.preventDefault();
+              clicked();
+            });
+            root.appendChild(control);
+            return root;
+          },
+        },
+      }));
+      lumine.commands.dispatch(editorView, "hover:toggle");
+      await microtasks();
+      editorView.getComponent().updateSync();
+      await frames();
+      const item = overlayItem(editor);
+      const control = item.querySelector(".provider-source-action");
+      control.focus();
+      return { item, control, clicked };
+    }
+
+    for (const tag of ["button", "a"]) {
+      it(`keeps a provider ${tag} focused for activation and keyboard navigation`, async () => {
+        const { item, control, clicked } = await showInteractiveContent(tag);
+        expect(document.activeElement).toBe(control);
+        control.querySelector("span").dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+        expect(document.activeElement).toBe(control);
+        const keydown = jasmine.createSpy("provider keydown");
+        control.addEventListener("keydown", keydown);
+        for (const key of ["Enter", " ", "Tab"]) {
+          const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
+          control.dispatchEvent(event);
+          expect(keydown).toHaveBeenCalledWith(event);
+          expect(event.defaultPrevented).toBe(false);
+          expect(overlayItem(editor)).toBe(item);
+          expect(document.activeElement).toBe(control);
+        }
+        control.click();
+        expect(clicked).toHaveBeenCalledTimes(1);
+        expect(overlayItem(editor)).toBe(item);
+      });
+
+      it(`returns typing from a provider ${tag} to the editor and dismisses the overlay`, async () => {
+        const { control } = await showInteractiveContent(tag);
+        control.dispatchEvent(new KeyboardEvent("keydown", { key: "x", bubbles: true }));
+        expect(overlayItem(editor)).toBeNull();
+        expect(editorView.hasFocus()).toBe(true);
+      });
+
+      it(`dismisses a focused provider ${tag} on Escape even with modifiers`, async () => {
+        const { control } = await showInteractiveContent(tag);
+        control.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Escape", ctrlKey: true, bubbles: true }),
+        );
+        expect(overlayItem(editor)).toBeNull();
+      });
+    }
+
+    it("does not treat an outside button as an overlay action", async () => {
+      const { item } = await showInteractiveContent("button");
+      const outside = document.createElement("button");
+      jasmine.attachToDOM(outside);
+      outside.focus();
+      outside.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      expect(overlayItem(editor)).not.toBe(item);
+      expect(overlayItem(editor)).toBeNull();
+    });
+
     it("opens the same snapshot in the panel with fresh provider content", async () => {
       const created = [];
       const getHelp = jasmine.createSpy("getHelp").and.resolveTo({
