@@ -14,7 +14,7 @@
   margin: var(--hover-arrow-size) 0;
   max-width: min(var(--text-editor-width, 50vw), 50vw);
   border: 1px solid var(--overlay-border-color);
-  border-radius: var(--component-border-radius);
+  border-radius: var(--ui-border-radius);
   background-color: var(--overlay-background-color);
   box-shadow: 0 2px 8px 1px rgb(0 0 0 / 30%);
 }
@@ -29,9 +29,9 @@
   content: "";
   position: absolute;
   left: clamp(
-    var(--component-border-radius),
+    var(--ui-border-radius),
     calc(var(--overlay-anchor-offset, 25%) - var(--hover-arrow-size)),
-    calc(100% - var(--hover-arrow-size) * 2 - var(--component-border-radius))
+    calc(100% - var(--hover-arrow-size) * 2 - var(--ui-border-radius))
   );
   border: var(--hover-arrow-size) solid transparent;
   border-top-width: 0;
@@ -80,7 +80,7 @@ lumine-overlay[data-overlay-position="above"] {
   /* Its own scrolling has to round off with the box it scrolls inside, or
      content shows through the corners the border draws around. */
   border-radius: inherit;
-  font-family: var(--font-family);
+  font-family: var(--ui-font-family);
   font-size: var(--prose-font-size);
   line-height: var(--prose-line-height);
   color: var(--text-color);
@@ -105,7 +105,7 @@ lumine-overlay[data-overlay-position="above"] {
   background-color: var(--overlay-background-color);
   border-left: 1px solid var(--overlay-border-color);
   border-bottom: 1px solid var(--overlay-border-color);
-  border-bottom-left-radius: var(--component-border-radius);
+  border-bottom-left-radius: var(--ui-border-radius);
 }
 
 .hover-toolbar:hover,
@@ -156,7 +156,7 @@ lumine-overlay[data-overlay-position="above"] {
 .hover-overlay-view lumine-text-editor {
   padding: 0.3em 0.5em;
   border: 1px solid var(--overlay-border-color);
-  border-radius: var(--component-border-radius);
+  border-radius: var(--ui-border-radius);
   color: var(--syntax-text-color);
   background-color: color-mix(
     in srgb,
@@ -190,7 +190,7 @@ lumine-overlay[data-overlay-position="above"] {
 /* Inline code carries no syntax colors, so it needs the tint to read as code. */
 .hover-overlay-view code {
   padding: 0 0.3em;
-  border-radius: var(--component-border-radius);
+  border-radius: var(--ui-border-radius);
   background-color: rgb(from var(--text-color) r g b / 8%);
 }
 

@@ -1055,7 +1055,7 @@ describe("hover", () => {
       await microtasks();
       const item = overlayItem(editor);
       item.style.setProperty("--overlay-border-color", "rgb(10, 20, 30)");
-      item.style.setProperty("--component-padding", "12px");
+      item.style.setProperty("--ui-spacing", "12px");
       editorView.getComponent().updateSync();
       const content = item.querySelector(".context-help-content");
       const toolbar = item.querySelector(".hover-toolbar");
