@@ -9,7 +9,7 @@ Supplies the call signature shown while the user types arguments.
 | Consumed by | `consumeHoverSignature(provider)` returning a `Disposable` |
 | Owner       | [`hover`](https://github.com/lumine-code/hover)            |
 
-Signature help is triggered by typing; contextual documentation is supplied separately through `context-help.provider` and shared by hover and Documentation View. A language server reaches signature help through an `ide-client` adapter rather than by implementing this service directly.
+Signature help is triggered by typing; contextual documentation is supplied separately through `context-help.provider` and shared by hover and Documentation View. A language server reaches signature help through an `ide` adapter rather than by implementing this service directly.
 
 ## Registration
 
