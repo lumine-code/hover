@@ -52,9 +52,7 @@ describe("hover", () => {
     jasmine.attachToDOM(lumine.views.getView(lumine.workspace));
     disposables = new CompositeDisposable();
 
-    const helpPack = await lumine.packages.activatePackage(
-      path.join(packageRoot, "..", "documentation-view"),
-    );
+    const helpPack = await lumine.packages.activatePackage("documentation-view");
     contextHelpModule = helpPack.mainModule;
     const pack = await lumine.packages.activatePackage(packageRoot);
     mainModule = pack.mainModule;
@@ -285,7 +283,7 @@ describe("hover", () => {
       await lumine.packages.deactivatePackage("documentation-view");
       expect(mainModule.overlayManager.contextHelp).toBeNull();
       expect(overlayItem(editor)).toBe(item);
-      await lumine.packages.activatePackage(path.join(packageRoot, "..", "documentation-view"));
+      await lumine.packages.activatePackage("documentation-view");
       expect(mainModule.overlayManager.contextHelp).not.toBeNull();
       expect(overlayItem(editor)).toBe(item);
     });
