@@ -20,6 +20,7 @@ describe("hover package assets", () => {
 
   it("uses the hover: command prefix and escape dismissal in the keymap", () => {
     const keymap = JSON.parse(read("keymaps/main.json"));
+    expect(keymap["lumine-workspace"]["ctrl-h"]).toBe("hover:toggle-trace");
     expect(keymap["lumine-text-editor"]["cmdorctrl-alt-h"]).toBe("hover:toggle");
     expect(keymap["lumine-text-editor"]["cmdorctrl-alt-j"]).toBe("hover:toggle-signature-help");
     expect(keymap["lumine-text-editor.hover-active"]["escape"]).toBe("hover:dismiss");
@@ -68,6 +69,7 @@ describe("hover package assets", () => {
     expect(pkg.consumedServices["hover.signature-provider"].versions["^1.0.0"]).toBe(
       "consumeHoverSignature",
     );
+    expect(pkg.consumedServices["status-bar"].versions["^1.0.0"]).toBe("consumeStatusBar");
     expect(pkg.providedServices["background-tips.provider"].versions["1.0.0"]).toBe(
       "provideBackgroundTips",
     );
@@ -82,9 +84,14 @@ describe("hover package assets", () => {
       "scrollChaining",
       "showDelay",
       "showOnCursorMove",
-      "showOnMouseMove",
       "showSignatureWhileTyping",
+      "statusBar",
+      "trace",
     ]);
+    expect(schema.trace.type).toBe("boolean");
+    expect(schema.trace.default).toBe(true);
+    expect(schema.statusBar.type).toBe("boolean");
+    expect(schema.statusBar.default).toBe(false);
     expect(schema.scrollChaining.type).toBe("boolean");
     expect(schema.scrollChaining.default).toBe(false);
     for (const entry of Object.values(schema)) {

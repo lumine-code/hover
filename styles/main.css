@@ -2,6 +2,10 @@
    `.hover-overlay-view-container` popover holding a padded
    `.hover-overlay-view`, mounted as an overlay decoration. */
 
+.hover-trace-status.active {
+  color: var(--text-color-success);
+}
+
 .hover-overlay-view-container {
   --hover-arrow-size: 6px;
   --context-help-border-color: var(--overlay-border-color);

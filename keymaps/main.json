@@ -1,4 +1,7 @@
 {
+  "lumine-workspace": {
+    "ctrl-h": "hover:toggle-trace"
+  },
   "lumine-text-editor": {
     "cmdorctrl-alt-h": "hover:toggle",
     "cmdorctrl-alt-j": "hover:toggle-signature-help"

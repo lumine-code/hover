@@ -176,6 +176,245 @@ describe("hover", () => {
     );
   }
 
+  describe("trace mode", () => {
+    it("takes its initial state from config and resets a local override on activation", async () => {
+      lumine.config.set("hover.trace", false);
+      await lumine.packages.deactivatePackage("hover");
+      mainModule = (await lumine.packages.activatePackage(packageRoot)).mainModule;
+      expect(mainModule.overlayManager.trace).toBe(false);
+
+      mainModule.overlayManager.toggleTrace();
+      expect(mainModule.overlayManager.trace).toBe(true);
+      expect(lumine.config.get("hover.trace")).toBe(false);
+
+      await lumine.packages.deactivatePackage("hover");
+      mainModule = (await lumine.packages.activatePackage(packageRoot)).mainModule;
+      expect(mainModule.overlayManager.trace).toBe(false);
+    });
+
+    it("uses config changes to replace the local override", () => {
+      expect(mainModule.overlayManager.trace).toBe(true);
+      mainModule.overlayManager.toggleTrace();
+      expect(mainModule.overlayManager.trace).toBe(false);
+      expect(lumine.config.get("hover.trace")).toBe(true);
+
+      lumine.config.set("hover.trace", false);
+      mainModule.overlayManager.toggleTrace();
+      expect(mainModule.overlayManager.trace).toBe(true);
+      expect(lumine.config.get("hover.trace")).toBe(false);
+
+      lumine.config.set("hover.trace", true);
+      expect(mainModule.overlayManager.trace).toBe(true);
+      lumine.config.set("hover.trace", false);
+      expect(mainModule.overlayManager.trace).toBe(false);
+    });
+
+    it("cancels pointer rest when disabled and resumes tracking when enabled", async () => {
+      const hover = jasmine.createSpy("hover").and.resolveTo({
+        contents: { kind: "markdown", value: "pointer docs" },
+      });
+      addHoverProvider(hover);
+      const point = pixelFor([0, 1]);
+      movePointerTo(point);
+      mainModule.overlayManager.toggleTrace();
+      advanceClock(showDelay);
+      await microtasks();
+      expect(hover).not.toHaveBeenCalled();
+
+      movePointerTo(point);
+      advanceClock(showDelay);
+      await microtasks();
+      expect(hover).not.toHaveBeenCalled();
+
+      mainModule.overlayManager.toggleTrace();
+      movePointerTo(point);
+      advanceClock(showDelay);
+      await microtasks();
+      expect(hover).toHaveBeenCalledTimes(1);
+      expect(overlayItem(editor).textContent).toContain("pointer docs");
+    });
+
+    it("rejects a pointer answer even after tracking is enabled again", async () => {
+      let resolveHelp;
+      addHoverProvider(
+        () =>
+          new Promise((resolve) => {
+            resolveHelp = resolve;
+          }),
+      );
+      movePointerTo(pixelFor([0, 1]));
+      advanceClock(showDelay);
+      await microtasks();
+      expect(resolveHelp).toBeDefined();
+
+      mainModule.overlayManager.toggleTrace();
+      mainModule.overlayManager.toggleTrace();
+      resolveHelp({ contents: { kind: "markdown", value: "stale pointer docs" } });
+      await microtasks();
+      expect(overlayItem(editor)).toBeNull();
+    });
+
+    it("keeps command and cursor hover available when tracking is disabled", async () => {
+      lumine.config.set("hover.trace", false);
+      lumine.config.set("hover.showOnCursorMove", true);
+      const hover = jasmine.createSpy("hover").and.resolveTo({
+        contents: { kind: "markdown", value: "cursor docs" },
+      });
+      addHoverProvider(hover);
+
+      lumine.commands.dispatch(editorView, "hover:toggle");
+      await microtasks();
+      expect(overlayItem(editor).textContent).toContain("cursor docs");
+      lumine.commands.dispatch(editorView, "hover:dismiss");
+      hover.calls.reset();
+
+      editor.setCursorBufferPosition([0, 2]);
+      advanceClock(showDelay);
+      await microtasks();
+      expect(hover).toHaveBeenCalledTimes(1);
+      expect(overlayItem(editor).textContent).toContain("cursor docs");
+      expect(mainModule.overlayManager.trace).toBe(false);
+    });
+
+    it("toggles once from workspace descendants without notifications when the icon is hidden", () => {
+      spyOn(lumine.notifications, "addInfo");
+      lumine.commands.dispatch(editorView, "hover:toggle-trace");
+      expect(mainModule.overlayManager.trace).toBe(false);
+      expect(lumine.notifications.addInfo).not.toHaveBeenCalled();
+      expect(lumine.config.get("hover.trace")).toBe(true);
+
+      lumine.commands.dispatch(lumine.views.getView(lumine.workspace), "hover:toggle-trace");
+      expect(mainModule.overlayManager.trace).toBe(true);
+      expect(lumine.notifications.addInfo).not.toHaveBeenCalled();
+    });
+
+    it("dispatches Ctrl-H from an editor and a panel through the workspace keymap", () => {
+      const panelItem = document.createElement("div");
+      const control = document.createElement("button");
+      panelItem.appendChild(control);
+      const panel = lumine.workspace.addBottomPanel({ item: panelItem });
+      disposables.add(new Disposable(() => panel.destroy()));
+
+      for (const [target, trace] of [
+        [editorView, false],
+        [control, true],
+      ]) {
+        const bindings = lumine.keymaps.findKeyBindings({ keystrokes: "ctrl-h", target });
+        expect(
+          bindings.some(
+            ({ command, selector }) =>
+              command === "hover:toggle-trace" && selector === "lumine-workspace",
+          ),
+        ).toBe(true);
+        lumine.keymaps.handleKeyboardEvent(
+          lumine.keymaps.constructor.buildKeydownEvent("h", { ctrl: true, target }),
+        );
+        expect(mainModule.overlayManager.trace).toBe(trace);
+        expect(lumine.config.get("hover.trace")).toBe(true);
+      }
+    });
+  });
+
+  describe("trace status bar", () => {
+    let statusBar;
+    let statusSubscription;
+    let tiles;
+    let tooltipDisposals;
+
+    beforeEach(() => {
+      tiles = [];
+      tooltipDisposals = [];
+      statusBar = {
+        addRightTile: jasmine.createSpy("addRightTile").and.callFake(({ item }) => {
+          jasmine.attachToDOM(item);
+          const tile = {
+            item,
+            destroy: jasmine.createSpy("destroy tile").and.callFake(() => item.remove()),
+          };
+          tiles.push(tile);
+          return tile;
+        }),
+      };
+      spyOn(lumine.tooltips, "add").and.callFake(() => {
+        const dispose = jasmine.createSpy("dispose tooltip");
+        tooltipDisposals.push(dispose);
+        return new Disposable(dispose);
+      });
+      statusSubscription = mainModule.consumeStatusBar(statusBar);
+      disposables.add(statusSubscription);
+    });
+
+    it("shows an optional right-side icon whose state follows local and config changes", () => {
+      expect(lumine.config.get("hover.statusBar")).toBe(false);
+      expect(statusBar.addRightTile).not.toHaveBeenCalled();
+      lumine.config.set("hover.statusBar", true);
+      expect(statusBar.addRightTile).toHaveBeenCalledTimes(1);
+      const item = tiles[0].item;
+      expect(statusBar.addRightTile.calls.mostRecent().args[0].priority).toBe(245);
+      expect(item.matches("status-bar-tile.hover-trace-status.active")).toBe(true);
+      expect(item.querySelector(".icon.is-icon-only.icon-eye")).not.toBeNull();
+      expect(item.textContent).toBe("");
+      expect(item.getAttribute("aria-label")).toMatch(/enabled/i);
+      expect(lumine.tooltips.add.calls.mostRecent().args[0]).toBe(item);
+      const tooltip = lumine.tooltips.add.calls.mostRecent().args[1];
+      expect(tooltip.title()).toMatch(/enabled/i);
+      expect(tooltip.keyBindingCommand).toBe("hover:toggle-trace");
+
+      item.click();
+      expect(mainModule.overlayManager.trace).toBe(false);
+      expect(lumine.config.get("hover.trace")).toBe(true);
+      expect(item.classList.contains("active")).toBe(false);
+      expect(item.getAttribute("aria-label")).toMatch(/disabled/i);
+      expect(tooltip.title()).toMatch(/disabled/i);
+
+      lumine.config.set("hover.trace", false);
+      lumine.config.set("hover.trace", true);
+      expect(item.classList.contains("active")).toBe(true);
+      expect(item.getAttribute("aria-label")).toMatch(/enabled/i);
+    });
+
+    it("toggles without notifications and recreates the icon with the current local state", () => {
+      spyOn(lumine.notifications, "addInfo");
+      lumine.config.set("hover.statusBar", true);
+      lumine.commands.dispatch(editorView, "hover:toggle-trace");
+      expect(lumine.notifications.addInfo).not.toHaveBeenCalled();
+      expect(tiles[0].item.classList.contains("active")).toBe(false);
+
+      lumine.config.set("hover.statusBar", false);
+      expect(tiles[0].destroy).toHaveBeenCalledTimes(1);
+      expect(tooltipDisposals[0]).toHaveBeenCalledTimes(1);
+      lumine.commands.dispatch(editorView, "hover:toggle-trace");
+      expect(lumine.notifications.addInfo).not.toHaveBeenCalled();
+
+      lumine.config.set("hover.statusBar", true);
+      expect(statusBar.addRightTile).toHaveBeenCalledTimes(2);
+      expect(tiles[1].item.classList.contains("active")).toBe(true);
+    });
+
+    it("destroys its tile and tooltip when the service disconnects and on deactivation", async () => {
+      lumine.config.set("hover.statusBar", true);
+      const disconnectedTile = tiles[0];
+      const disconnectedTooltip = tooltipDisposals[0];
+      statusSubscription.dispose();
+      expect(disconnectedTile.destroy).toHaveBeenCalledTimes(1);
+      expect(disconnectedTooltip).toHaveBeenCalledTimes(1);
+
+      disposables.add(mainModule.consumeStatusBar(statusBar));
+      const deactivatedTile = tiles[tiles.length - 1];
+      const deactivatedTooltip = tooltipDisposals[tooltipDisposals.length - 1];
+      await lumine.packages.deactivatePackage("hover");
+      expect(deactivatedTile.destroy).toHaveBeenCalledTimes(1);
+      expect(deactivatedTooltip).toHaveBeenCalledTimes(1);
+
+      mainModule = (await lumine.packages.activatePackage(packageRoot)).mainModule;
+      disposables.add(mainModule.consumeStatusBar(statusBar));
+      const activeTile = tiles[tiles.length - 1];
+      expect(activeTile.item.classList.contains("active")).toBe(true);
+      activeTile.item.click();
+      expect(mainModule.overlayManager.trace).toBe(false);
+    });
+  });
+
   describe("shared context help lifecycle", () => {
     it("does not mount a request that completes after dismissal", async () => {
       let resolveHelp;

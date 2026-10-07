@@ -44,6 +44,11 @@
     }
   },
   "consumedServices": {
+    "status-bar": {
+      "versions": {
+        "^1.0.0": "consumeStatusBar"
+      }
+    },
     "context-help.registry": {
       "versions": {
         "^1.0.0": "consumeContextHelp"
@@ -69,15 +74,21 @@
     "prettier": "^3.9.9"
   },
   "configSchema": {
-    "showOnMouseMove": {
-      "title": "Show On Mouse Move",
-      "description": "Show the hover tooltip when the mouse pointer rests on a symbol.",
+    "trace": {
+      "title": "Trace",
+      "description": "Follow the mouse pointer to show hover tooltips. The trace command and status bar icon toggle this mode for the current window without saving the setting.",
       "type": "boolean",
       "default": true
     },
+    "statusBar": {
+      "title": "Status Bar Icon",
+      "description": "Show an icon on the right of the status bar to toggle mouse tracing in the current window.",
+      "type": "boolean",
+      "default": false
+    },
     "showOnCursorMove": {
       "title": "Show On Cursor Move",
-      "description": "Show the hover tooltip when the cursor rests on a symbol. When disabled, the tooltip appears only via the `hover:toggle` command.",
+      "description": "Show the hover tooltip when the cursor rests on a symbol, independently of mouse tracing.",
       "type": "boolean",
       "default": false
     },
