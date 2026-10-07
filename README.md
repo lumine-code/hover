@@ -34,7 +34,7 @@ Commands available in `lumine-text-editor`:
 
 ## Usage
 
-Trace follows the mouse pointer and requests documentation when it rests over a symbol. The `hover.trace` setting enables it by default and supplies the initial mode for each window. Use `hover:toggle-trace` to switch the mode in the current window until it reloads; this does not change the saved setting. A later change to `hover.trace` replaces the window's current mode. Cursor-triggered hover and explicit commands remain available independently.
+Trace follows the mouse pointer and requests documentation when it rests over a symbol. The `hover.trace` setting enables it by default and supplies the initial mode for each window. Use `hover:toggle-trace` to switch the mode in the current window until it reloads; this does not change the saved setting. A later change to `hover.trace` replaces the window's current mode. Switching trace off immediately closes the current hover and cancels pending hover work; switching it on immediately checks the current pointer position without waiting for mouse movement. This applies to the command, icon, and setting changes. Switching trace off leaves signature help open. Cursor-triggered hover and explicit commands remain available independently.
 
 Enable `hover.statusBar` to show an eye icon on the right side of the status bar; it is hidden by default. The icon indicates the current trace mode and switches it when clicked.
 

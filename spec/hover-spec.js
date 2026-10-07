@@ -167,13 +167,38 @@ describe("hover", () => {
     const screenRow = component.screenPositionForPixelPosition({ left, top }).row;
     const line = targetView.querySelector(`.line[data-screen-row="${screenRow}"]`);
     const lines = targetView.querySelector(".lines").getBoundingClientRect();
-    line.dispatchEvent(
-      new MouseEvent("mousemove", {
-        bubbles: true,
-        clientX: lines.left + left,
-        clientY: lines.top + top,
-      }),
-    );
+    const event = new MouseEvent("mousemove", {
+      bubbles: true,
+      clientX: lines.left + left,
+      clientY: lines.top + top,
+    });
+    line.dispatchEvent(event);
+    return event;
+  }
+
+  // Synthetic mouse events do not move the native pointer. Supply only the
+  // corresponding hit-test result, leaving the editor's coordinate conversion
+  // and all mouse/command dispatch on their normal paths.
+  function pointerHitTesting() {
+    let pointer;
+    spyOn(document, "elementFromPoint").and.callFake((clientX, clientY) => {
+      if (clientX !== pointer?.clientX || clientY !== pointer?.clientY) return null;
+      return pointer.target;
+    });
+    return {
+      moveTo(point, targetEditor = editor) {
+        pointer = movePointerTo(point, targetEditor);
+      },
+      moveToElement(target) {
+        const rect = target.getBoundingClientRect();
+        pointer = new MouseEvent("mousemove", {
+          bubbles: true,
+          clientX: rect.left + rect.width / 2,
+          clientY: rect.top + rect.height / 2,
+        });
+        target.dispatchEvent(pointer);
+      },
+    };
   }
 
   describe("trace mode", () => {
@@ -210,48 +235,145 @@ describe("hover", () => {
     });
 
     it("cancels pointer rest when disabled and resumes tracking when enabled", async () => {
+      const pointer = pointerHitTesting();
       const hover = jasmine.createSpy("hover").and.resolveTo({
         contents: { kind: "markdown", value: "pointer docs" },
       });
       addHoverProvider(hover);
       const point = pixelFor([0, 1]);
-      movePointerTo(point);
+      pointer.moveTo(point);
       mainModule.overlayManager.toggleTrace();
       advanceClock(showDelay);
       await microtasks();
       expect(hover).not.toHaveBeenCalled();
 
-      movePointerTo(point);
+      pointer.moveTo(point);
       advanceClock(showDelay);
       await microtasks();
       expect(hover).not.toHaveBeenCalled();
 
       mainModule.overlayManager.toggleTrace();
-      movePointerTo(point);
-      advanceClock(showDelay);
       await microtasks();
       expect(hover).toHaveBeenCalledTimes(1);
       expect(overlayItem(editor).textContent).toContain("pointer docs");
+      advanceClock(showDelay);
+      await microtasks();
+      expect(hover).toHaveBeenCalledTimes(1);
     });
 
     it("rejects a pointer answer even after tracking is enabled again", async () => {
-      let resolveHelp;
+      const pointer = pointerHitTesting();
+      const requests = [];
       addHoverProvider(
-        () =>
+        (_editor, _position, context) =>
           new Promise((resolve) => {
-            resolveHelp = resolve;
+            requests.push({ resolve, signal: context.signal });
           }),
       );
-      movePointerTo(pixelFor([0, 1]));
+      pointer.moveTo(pixelFor([0, 1]));
       advanceClock(showDelay);
       await microtasks();
-      expect(resolveHelp).toBeDefined();
+      expect(requests.length).toBe(1);
 
       mainModule.overlayManager.toggleTrace();
+      expect(requests[0].signal.aborted).toBe(true);
       mainModule.overlayManager.toggleTrace();
-      resolveHelp({ contents: { kind: "markdown", value: "stale pointer docs" } });
+      await microtasks();
+      expect(requests.length).toBe(2);
+      requests[0].resolve({ contents: { kind: "markdown", value: "stale pointer docs" } });
       await microtasks();
       expect(overlayItem(editor)).toBeNull();
+      requests[1].resolve({ contents: { kind: "markdown", value: "current pointer docs" } });
+      await microtasks();
+      expect(overlayItem(editor).textContent).toContain("current pointer docs");
+      expect(overlayItem(editor).textContent).not.toContain("stale pointer docs");
+    });
+
+    it("immediately requests help at the latest pointer position when enabled", async () => {
+      const pointer = pointerHitTesting();
+      lumine.config.set("hover.trace", false);
+      const hover = jasmine.createSpy("hover").and.resolveTo({
+        contents: { kind: "markdown", value: "latest symbol docs" },
+      });
+      addHoverProvider(hover);
+      pointer.moveTo(pixelFor([0, 0]));
+      pointer.moveTo(pixelFor([0, 2]));
+      expect(hover).not.toHaveBeenCalled();
+
+      lumine.commands.dispatch(lumine.views.getView(lumine.workspace), "hover:toggle-trace");
+      await microtasks();
+      expect(hover).toHaveBeenCalledTimes(1);
+      const [hoveredEditor, position] = hover.calls.mostRecent().args;
+      expect(hoveredEditor).toBe(editor);
+      expect(position.isEqual([0, 2])).toBe(true);
+      expect(overlayItem(editor).textContent).toContain("latest symbol docs");
+      expect(lumine.config.get("hover.trace")).toBe(false);
+    });
+
+    it("uses the editor reached while tracking was disabled instead of the previous one", async () => {
+      const pointer = pointerHitTesting();
+      const fragment = addRegisteredEditor();
+      lumine.config.set("hover.trace", false);
+      const hover = jasmine.createSpy("hover").and.resolveTo({
+        contents: { kind: "markdown", value: "fragment docs" },
+      });
+      addHoverProvider(hover);
+      pointer.moveTo(pixelFor([0, 1]));
+      pointer.moveTo(pixelFor([0, 2], fragment.editor), fragment.editor);
+
+      lumine.commands.dispatch(lumine.views.getView(lumine.workspace), "hover:toggle-trace");
+      await microtasks();
+      expect(hover).toHaveBeenCalledTimes(1);
+      const [hoveredEditor, position] = hover.calls.mostRecent().args;
+      expect(hoveredEditor).toBe(fragment.editor);
+      expect(position.isEqual([0, 2])).toBe(true);
+      expect(overlayItem(fragment.editor).textContent).toContain("fragment docs");
+      expect(overlayItem(editor)).toBeNull();
+    });
+
+    it("immediately closes a visible hover when tracking is disabled", async () => {
+      const pointer = pointerHitTesting();
+      addHoverProvider(async () => ({ contents: { kind: "markdown", value: "pointer docs" } }));
+      pointer.moveTo(pixelFor([0, 1]));
+      advanceClock(showDelay);
+      await microtasks();
+      expect(overlayItem(editor)).not.toBeNull();
+
+      lumine.commands.dispatch(lumine.views.getView(lumine.workspace), "hover:toggle-trace");
+      expect(overlayItem(editor)).toBeNull();
+      expect(editorView.classList.contains("hover-active")).toBe(false);
+    });
+
+    it("cancels pending hover without closing visible signature help", async () => {
+      addSignatureProvider();
+      lumine.commands.dispatch(editorView, "hover:toggle-signature-help");
+      await microtasks();
+      const signature = overlayItem(editor);
+      expect(signature.querySelector(".hover-signature")).not.toBeNull();
+      let resolveHelp;
+      let signal;
+      addHoverProvider(
+        (_editor, _position, context) =>
+          new Promise((resolve) => {
+            resolveHelp = resolve;
+            signal = context.signal;
+          }),
+      );
+      editor.setCursorBufferPosition([0, 1]);
+      await microtasks();
+      expect(overlayItem(editor)).toBe(signature);
+      lumine.commands.dispatch(editorView, "hover:toggle");
+      await microtasks();
+      expect(resolveHelp).toBeDefined();
+      expect(signal).toBeDefined();
+
+      lumine.commands.dispatch(lumine.views.getView(lumine.workspace), "hover:toggle-trace");
+      expect(signal.aborted).toBe(true);
+      expect(overlayItem(editor)).toBe(signature);
+      resolveHelp({ contents: { kind: "markdown", value: "late hover docs" } });
+      await microtasks();
+      expect(overlayItem(editor)).toBe(signature);
+      expect(signature.textContent).not.toContain("late hover docs");
     });
 
     it("keeps command and cursor hover available when tracking is disabled", async () => {
@@ -389,6 +511,30 @@ describe("hover", () => {
       lumine.config.set("hover.statusBar", true);
       expect(statusBar.addRightTile).toHaveBeenCalledTimes(2);
       expect(tiles[1].item.classList.contains("active")).toBe(true);
+    });
+
+    it("does not reopen the previous editor hover when enabled from its status icon", async () => {
+      const pointer = pointerHitTesting();
+      lumine.config.set("hover.statusBar", true);
+      const hover = jasmine.createSpy("hover").and.resolveTo({
+        contents: { kind: "markdown", value: "pointer docs" },
+      });
+      addHoverProvider(hover);
+      pointer.moveTo(pixelFor([0, 1]));
+      advanceClock(showDelay);
+      await microtasks();
+      expect(overlayItem(editor)).not.toBeNull();
+
+      const item = tiles[0].item;
+      lumine.commands.dispatch(lumine.views.getView(lumine.workspace), "hover:toggle-trace");
+      expect(overlayItem(editor)).toBeNull();
+      hover.calls.reset();
+      pointer.moveToElement(item.querySelector(".icon"));
+      item.click();
+      await microtasks();
+      expect(mainModule.overlayManager.trace).toBe(true);
+      expect(hover).not.toHaveBeenCalled();
+      expect(overlayItem(editor)).toBeNull();
     });
 
     it("destroys its tile and tooltip when the service disconnects and on deactivation", async () => {
