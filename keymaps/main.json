@@ -3,7 +3,7 @@
     "ctrl-h": "hover:toggle-trace"
   },
   "lumine-text-editor": {
-    "cmdorctrl-alt-h": "hover:toggle",
+    "alt-h": "hover:toggle",
     "cmdorctrl-alt-j": "hover:toggle-signature-help"
   },
   "lumine-text-editor.hover-active": {

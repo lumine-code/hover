@@ -21,7 +21,7 @@ describe("hover package assets", () => {
   it("uses the hover: command prefix and escape dismissal in the keymap", () => {
     const keymap = JSON.parse(read("keymaps/main.json"));
     expect(keymap["lumine-workspace"]["ctrl-h"]).toBe("hover:toggle-trace");
-    expect(keymap["lumine-text-editor"]["cmdorctrl-alt-h"]).toBe("hover:toggle");
+    expect(keymap["lumine-text-editor"]["alt-h"]).toBe("hover:toggle");
     expect(keymap["lumine-text-editor"]["cmdorctrl-alt-j"]).toBe("hover:toggle-signature-help");
     expect(keymap["lumine-text-editor.hover-active"]["escape"]).toBe("hover:dismiss");
     expect(read("keymaps/main.json")).not.toContain("pulsar-hover:");
