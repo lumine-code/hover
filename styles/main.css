@@ -9,7 +9,7 @@
 .hover-overlay-view-container {
   --hover-arrow-size: 6px;
   --context-help-border-color: var(--overlay-border-color);
-  --context-help-background-color: var(--overlay-background-color);
+  --context-help-background-color: var(--tool-panel-background-color);
 
   position: relative;
   /* Standing off the line leaves the word being explained readable, and room
@@ -19,7 +19,7 @@
   max-width: min(var(--text-editor-width, 50vw), 50vw);
   border: 1px solid var(--overlay-border-color);
   border-radius: var(--ui-border-radius);
-  background-color: var(--overlay-background-color);
+  background-color: var(--context-help-background-color);
   box-shadow: 0 2px 8px 1px rgb(0 0 0 / 30%);
 }
 
@@ -44,7 +44,7 @@
 }
 
 .hover-overlay-view-container::after {
-  border-bottom-color: var(--overlay-background-color);
+  border-bottom-color: var(--context-help-background-color);
   margin-bottom: -1px;
 }
 
@@ -69,7 +69,7 @@ lumine-overlay[data-overlay-position="above"] {
   }
 
   .hover-overlay-view-container::after {
-    border-top-color: var(--overlay-background-color);
+    border-top-color: var(--context-help-background-color);
     margin-bottom: 0;
     margin-top: -1px;
   }
@@ -106,7 +106,7 @@ lumine-overlay[data-overlay-position="above"] {
   display: flex;
   flex-direction: column;
   opacity: 0;
-  background-color: var(--overlay-background-color);
+  background-color: var(--context-help-background-color);
   border-left: 1px solid var(--overlay-border-color);
   border-bottom: 1px solid var(--overlay-border-color);
   border-bottom-left-radius: var(--ui-border-radius);
@@ -165,7 +165,7 @@ lumine-overlay[data-overlay-position="above"] {
   background-color: color-mix(
     in srgb,
     var(--syntax-background-color) 80%,
-    var(--overlay-background-color)
+    var(--context-help-background-color)
   );
 }
 
