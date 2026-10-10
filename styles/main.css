@@ -9,7 +9,7 @@
 .hover-overlay-view-container {
   --hover-arrow-size: 6px;
   --context-help-border-color: var(--overlay-border-color);
-  --context-help-background-color: var(--tool-panel-background-color);
+  --context-help-background-color: var(--overlay-background-color);
 
   position: relative;
   /* Standing off the line leaves the word being explained readable, and room

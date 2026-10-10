@@ -1466,12 +1466,12 @@ describe("hover", () => {
       const content = item.querySelector(".context-help-content");
       const toolbar = item.querySelector(".hover-toolbar");
       const sections = item.querySelectorAll(".context-help-section");
-      expect(getComputedStyle(item).backgroundColor).toBe("rgb(40, 50, 60)");
-      expect(getComputedStyle(toolbar).backgroundColor).toBe("rgb(40, 50, 60)");
+      expect(getComputedStyle(item).backgroundColor).toBe("rgb(240, 250, 255)");
+      expect(getComputedStyle(toolbar).backgroundColor).toBe("rgb(240, 250, 255)");
       const wrapper = item.closest("lumine-overlay");
       const arrowFill =
         wrapper.dataset.overlayPosition === "above" ? "borderTopColor" : "borderBottomColor";
-      expect(getComputedStyle(item, "::after")[arrowFill]).toBe("rgb(40, 50, 60)");
+      expect(getComputedStyle(item, "::after")[arrowFill]).toBe("rgb(240, 250, 255)");
       expect(getComputedStyle(toolbar).position).toBe("absolute");
       expect(item.offsetHeight).toBe(content.offsetHeight + 2);
       expect(getComputedStyle(content).overflowY).toBe("auto");
