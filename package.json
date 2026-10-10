@@ -106,12 +106,6 @@
       "minimum": 0,
       "default": 250
     },
-    "scrollChaining": {
-      "title": "Scroll Chaining",
-      "description": "Scroll the editor when the hover tooltip or signature help overlay reaches its scroll boundary or has no scrollable content.",
-      "type": "boolean",
-      "default": false
-    },
     "showSignatureWhileTyping": {
       "title": "Show Signature Help While Typing",
       "description": "Show the signature help overlay automatically when a trigger character is typed, and keep it updated while typing function arguments.",

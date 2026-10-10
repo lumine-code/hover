@@ -581,6 +581,27 @@ describe("hover", () => {
       expect(overlayItem(editor)).toBeNull();
     });
 
+    it("cancels a pending hover answer when the mouse wheel reaches its editor", async () => {
+      let resolveHelp;
+      let signal;
+      addHoverProvider(
+        (_editor, _position, context) =>
+          new Promise((resolve) => {
+            resolveHelp = resolve;
+            signal = context.signal;
+          }),
+      );
+      lumine.commands.dispatch(editorView, "hover:toggle");
+      await microtasks();
+      editorView.dispatchEvent(
+        new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: -100 }),
+      );
+      expect(signal.aborted).toBe(true);
+      resolveHelp({ contents: { kind: "markdown", value: "late docs" } });
+      await microtasks();
+      expect(overlayItem(editor)).toBeNull();
+    });
+
     it("keeps the newer request when an older provider finishes last", async () => {
       const answers = [];
       addHoverProvider(
@@ -1548,6 +1569,38 @@ describe("hover", () => {
       expect(item.getBoundingClientRect().width).toBeGreaterThan(100);
     });
 
+    it("passes wheel events from a short code block and tooltip padding to the editor and dismisses", async () => {
+      addHoverProvider(async () => ({
+        contents: { kind: "markdown", value: "```js\nlet x = 1;\n```" },
+      }));
+      const editorWheel = jasmine.createSpy("editorWheel");
+      editorView.addEventListener("wheel", editorWheel);
+      disposables.add(new Disposable(() => editorView.removeEventListener("wheel", editorWheel)));
+      for (const targetKind of ["code", "content", "padding"]) {
+        lumine.commands.dispatch(editorView, "hover:toggle");
+        await microtasks();
+
+        const item = overlayItem(editor);
+        const embedded = item.querySelector("lumine-text-editor");
+        editorView.getComponent().updateSync();
+        embedded.getComponent().updateSync();
+        editorView.getComponent().updateSync();
+        await frames(3);
+        const code = embedded.querySelector(".line");
+        expect(code).not.toBeNull();
+        expect(code.textContent).toBe("let x = 1;");
+        expect(getComputedStyle(item).visibility).toBe("visible");
+
+        const targets = { code, content: item.querySelector(".hover-overlay-view"), padding: item };
+        editorWheel.calls.reset();
+        targets[targetKind].dispatchEvent(
+          new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: 100 }),
+        );
+        expect(editorWheel).toHaveBeenCalledTimes(1);
+        expect(overlayItem(editor)).toBeNull();
+      }
+    });
+
     it("sizes an embedded code editor when global soft wrap is enabled", async () => {
       const previousSoftWrap = lumine.config.get("editor.softWrap");
       lumine.config.set("editor.softWrap", true);
@@ -1606,16 +1659,12 @@ describe("hover", () => {
   });
 
   for (const type of ["hover", "signature-help"]) {
-    describe(`${type} scrolling`, () => {
+    describe(`${type} placement and scrolling`, () => {
       let item;
       let content;
       let editorWheel;
 
       beforeEach(async () => {
-        const previousScrollChaining = lumine.config.get("hover.scrollChaining");
-        disposables.add(
-          new Disposable(() => lumine.config.set("hover.scrollChaining", previousScrollChaining)),
-        );
         const documentation = "Scrolling documentation.\n\n".repeat(50);
         if (type === "hover") {
           addHoverProvider(async () => ({
@@ -1636,7 +1685,9 @@ describe("hover", () => {
         content = item.querySelector(".hover-overlay-view");
         content.style.maxHeight = "40px";
         editorView.getComponent().updateSync();
+        await frames(3);
         expect(item.isConnected).toBe(true);
+        expect(getComputedStyle(item).visibility).toBe("visible");
         expect(content.scrollHeight).toBeGreaterThan(content.clientHeight);
 
         editorWheel = jasmine.createSpy("editorWheel");
@@ -1644,15 +1695,59 @@ describe("hover", () => {
         disposables.add(new Disposable(() => editorView.removeEventListener("wheel", editorWheel)));
       });
 
-      function wheel(deltaY, deltaX = 0) {
+      function wheel(deltaY, deltaX = 0, target = content.firstElementChild) {
         editorWheel.calls.reset();
         const event = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY, deltaX });
-        content.firstElementChild.dispatchEvent(event);
+        target.dispatchEvent(event);
         return event;
       }
 
-      it("keeps scrolling inside the overlay by default, including at its boundaries", () => {
-        expect(lumine.config.get("hover.scrollChaining")).toBe(false);
+      it("prefers placement above the source", () => {
+        const properties = overlayDecorations(editor)[0].getProperties();
+        expect(properties.side).toBe("above");
+        expect(properties.lockSide).toBe(true);
+      });
+
+      it("keeps its initial side while open and chooses again after reopening", async () => {
+        lumine.commands.dispatch(editorView, "hover:dismiss");
+        const component = editorView.getComponent();
+        let contentTop = 0;
+        spyOn(component.refs.content, "getBoundingClientRect").and.callFake(
+          () => new DOMRect(100, contentTop, 500, 500),
+        );
+        spyOn(component, "getWindowInnerHeight").and.returnValue(2000);
+
+        async function openOverlay() {
+          lumine.commands.dispatch(
+            editorView,
+            `hover:toggle${type === "hover" ? "" : "-signature-help"}`,
+          );
+          await microtasks();
+          component.updateSync();
+          await frames(3);
+          return overlayItem(editor);
+        }
+
+        const firstItem = await openOverlay();
+        const firstWrapper = firstItem.closest("lumine-overlay");
+        expect(firstWrapper.dataset.overlayPosition).toBe("below");
+
+        // Moving the source down leaves enough room above. The current overlay
+        // follows its source while keeping the side it initially selected.
+        contentTop = 700;
+        expect(firstItem.offsetHeight).toBeLessThan(contentTop);
+        component.updateSync();
+        await frames(3);
+        expect(overlayItem(editor)).toBe(firstItem);
+        expect(firstWrapper.dataset.overlayPosition).toBe("below");
+
+        lumine.commands.dispatch(editorView, "hover:dismiss");
+        const reopenedItem = await openOverlay();
+        expect(reopenedItem).not.toBe(firstItem);
+        expect(reopenedItem.closest("lumine-overlay").dataset.overlayPosition).toBe("above");
+      });
+
+      it("keeps wheel events inside a vertically scrollable overlay, including at its boundaries", () => {
         for (const [scrollTop, deltaY, deltaX] of [
           [0, -100, 0],
           [10, 100, 0],
@@ -1663,47 +1758,138 @@ describe("hover", () => {
           expect(wheel(deltaY, deltaX).defaultPrevented).toBe(false);
           expect(editorWheel).not.toHaveBeenCalled();
         }
-
-        content.style.maxHeight = "none";
-        expect(content.scrollHeight).toBe(content.clientHeight);
-        expect(wheel(100).defaultPrevented).toBe(false);
-        expect(editorWheel).not.toHaveBeenCalled();
+        expect(overlayItem(editor)).toBe(item);
       });
 
-      it("passes scrolling to the editor only when enabled and the content cannot move", () => {
-        lumine.config.set("hover.scrollChaining", true);
-        for (const [scrollTop, deltaY, reachesEditor] of [
-          [0, -100, true],
-          [0, 100, false],
-          [content.scrollHeight, 100, true],
-          [content.scrollHeight, -100, false],
+      it("keeps wheel events inside an overlay with only horizontal scrolling", () => {
+        const wide = document.createElement("div");
+        wide.style.width = "400px";
+        wide.style.height = "10px";
+        content.replaceChildren(wide);
+        content.style.width = "100px";
+        content.style.height = "40px";
+        content.style.maxHeight = "none";
+        content.style.overflowX = "auto";
+        content.style.overflowY = "hidden";
+        expect(content.scrollWidth).toBeGreaterThan(content.clientWidth);
+        expect(content.scrollHeight).toBe(content.clientHeight);
+
+        for (const [scrollLeft, deltaY, deltaX] of [
+          [0, 0, -100],
+          [10, 0, 100],
+          [content.scrollWidth, 0, 100],
+          [0, 100, 0],
         ]) {
-          content.scrollTop = scrollTop;
-          const event = wheel(deltaY);
-          expect(editorWheel.calls.count()).toBe(reachesEditor ? 1 : 0);
-          if (!reachesEditor) expect(event.defaultPrevented).toBe(false);
+          content.scrollLeft = scrollLeft;
+          expect(wheel(deltaY, deltaX).defaultPrevented).toBe(false);
+          expect(editorWheel).not.toHaveBeenCalled();
         }
-
-        content.style.maxHeight = "none";
-        expect(content.scrollHeight).toBe(content.clientHeight);
-        wheel(100);
-        expect(editorWheel).toHaveBeenCalledTimes(1);
+        expect(overlayItem(editor)).toBe(item);
       });
 
-      it("applies setting changes to an already open overlay", () => {
-        content.scrollTop = content.scrollHeight;
-        wheel(100);
-        expect(editorWheel).not.toHaveBeenCalled();
-
-        lumine.config.set("hover.scrollChaining", true);
-        wheel(100);
+      it("dismisses on an editor wheel event even when the viewport cannot move", () => {
+        editorView.setScrollTop(0);
+        editorView.getComponent().updateSync();
+        wheel(-100, 0, editorView);
+        expect(editorView.getScrollTop()).toBe(0);
         expect(editorWheel).toHaveBeenCalledTimes(1);
+        expect(overlayItem(editor)).toBeNull();
+      });
 
-        lumine.config.set("hover.scrollChaining", false);
+      it("dismisses when the mouse wheel targets another surface", () => {
+        const outside = document.createElement("div");
+        jasmine.attachToDOM(outside);
+        wheel(100, 0, outside);
+        expect(editorWheel).not.toHaveBeenCalled();
+        expect(overlayItem(editor)).toBeNull();
+      });
+
+      it("passes the wheel to the editor and dismisses when the panel no longer has scrollable content", () => {
         wheel(100);
         expect(editorWheel).not.toHaveBeenCalled();
         expect(overlayItem(editor)).toBe(item);
+
+        content.replaceChildren(document.createTextNode("Short documentation."));
+        expect(content.scrollHeight).toBe(content.clientHeight);
+        expect(content.scrollWidth).toBe(content.clientWidth);
+        wheel(100, 0, content);
+        expect(editorWheel).toHaveBeenCalledTimes(1);
+        expect(overlayItem(editor)).toBeNull();
       });
+
+      it("blocks wheel events over padding and siblings when a descendant can scroll", () => {
+        const scroller = document.createElement("div");
+        scroller.style.height = "25px";
+        scroller.style.width = "100px";
+        scroller.style.overflowY = "auto";
+        const tall = document.createElement("div");
+        tall.style.height = "100px";
+        scroller.appendChild(tall);
+        const sibling = document.createElement("div");
+        sibling.textContent = "Short documentation.";
+        content.replaceChildren(scroller, sibling);
+        content.style.maxHeight = "none";
+        expect(content.scrollHeight).toBe(content.clientHeight);
+        expect(content.scrollWidth).toBe(content.clientWidth);
+        expect(scroller.scrollHeight).toBeGreaterThan(scroller.clientHeight);
+
+        for (const target of [tall, sibling, content, item]) {
+          for (const [scrollTop, deltaY] of [
+            [0, -100],
+            [scroller.scrollHeight, 100],
+          ]) {
+            scroller.scrollTop = scrollTop;
+            expect(wheel(deltaY, 0, target).defaultPrevented).toBe(false);
+            expect(editorWheel).not.toHaveBeenCalled();
+          }
+        }
+        expect(overlayItem(editor)).toBe(item);
+
+        scroller.style.overflowY = "hidden";
+        wheel(100, 0, sibling);
+        expect(editorWheel).toHaveBeenCalledTimes(1);
+        expect(overlayItem(editor)).toBeNull();
+      });
+
+      it("passes wheel events when overflowing content is clipped rather than scrollable", () => {
+        content.style.overflow = "hidden";
+        expect(content.scrollHeight).toBeGreaterThan(content.clientHeight);
+        wheel(100);
+        expect(editorWheel).toHaveBeenCalledTimes(1);
+        expect(overlayItem(editor)).toBeNull();
+      });
+
+      for (const hiddenTarget of ["scroller", "wrapper"]) {
+        it(`passes the wheel and dismisses while a descendant ${hiddenTarget} is hidden`, () => {
+          const wrapper = document.createElement("div");
+          const scroller = document.createElement("div");
+          scroller.style.height = "25px";
+          scroller.style.width = "100px";
+          scroller.style.overflowY = "auto";
+          const tall = document.createElement("div");
+          tall.style.height = "100px";
+          scroller.appendChild(tall);
+          wrapper.appendChild(scroller);
+          const sibling = document.createElement("div");
+          sibling.textContent = "Short documentation.";
+          content.replaceChildren(wrapper, sibling);
+          content.style.maxHeight = "none";
+          expect(content.scrollHeight).toBe(content.clientHeight);
+          expect(content.scrollWidth).toBe(content.clientWidth);
+          expect(scroller.scrollHeight).toBeGreaterThan(scroller.clientHeight);
+
+          expect(wheel(100, 0, sibling).defaultPrevented).toBe(false);
+          expect(editorWheel).not.toHaveBeenCalled();
+          expect(overlayItem(editor)).toBe(item);
+
+          const hiddenNode = hiddenTarget === "wrapper" ? wrapper : scroller;
+          hiddenNode.style.visibility = "hidden";
+          expect(getComputedStyle(scroller).visibility).toBe("hidden");
+          wheel(100, 0, sibling);
+          expect(editorWheel).toHaveBeenCalledTimes(1);
+          expect(overlayItem(editor)).toBeNull();
+        });
+      }
     });
   }
 
