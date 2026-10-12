@@ -474,7 +474,7 @@ describe("hover", () => {
       const item = tiles[0].item;
       expect(statusBar.addRightTile.calls.mostRecent().args[0].priority).toBe(245);
       expect(item.matches("status-bar-tile.hover-trace-status.active")).toBe(true);
-      expect(item.querySelector(".icon.is-icon-only.icon-eye")).not.toBeNull();
+      expect(item.querySelector(".icon.is-icon-only.icon-light-bulb")).not.toBeNull();
       expect(item.textContent).toBe("");
       expect(item.getAttribute("aria-label")).toMatch(/enabled/i);
       expect(lumine.tooltips.add.calls.mostRecent().args[0]).toBe(item);
