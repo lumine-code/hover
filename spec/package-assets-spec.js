@@ -69,7 +69,7 @@ describe("hover package assets", () => {
     expect(pkg.consumedServices["hover.signature-provider"].versions["^1.0.0"]).toBe(
       "consumeHoverSignature",
     );
-    expect(pkg.consumedServices["status-bar"].versions["^1.0.0"]).toBe("consumeStatusBar");
+    expect(pkg.consumedServices["status-bar"].versions["^2.0.0"]).toBe("consumeStatusBar");
     expect(pkg.providedServices["background-tips.provider"].versions["1.0.0"]).toBe(
       "provideBackgroundTips",
     );

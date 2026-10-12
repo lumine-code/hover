@@ -4,7 +4,7 @@ Show documentation tooltips and signature help at the cursor.
 
 Fork of [savetheclocktower/pulsar-hover](https://github.com/savetheclocktower/pulsar-hover).
 
-Hover information comes from the shared context-help registry provided by `documentation-view`; signature help comes from provider packages. Both are shown as overlay decorations in pane editors and registered embedded editors such as notebook cells. The tooltip's Open in Documentation View button keeps the current result in a dock for continued reading.
+Hover information comes from the shared context-help registry provided by `documentation-view`; signature help comes from provider packages. Both are shown as overlay decorations in pane editors and registered embedded editors such as notebook cells. The tooltip's Open in Documentation View button keeps the current result in a dock for continued reading. Each editor window owns its overlays, mouse tracing and status control while sharing the provider registries.
 
 ## Features
 

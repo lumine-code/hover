@@ -1,3 +1,4 @@
+const windowService = require("./helpers/window-service");
 const path = require("path");
 const { CompositeDisposable, Disposable, Point } = require("lumine");
 
@@ -462,7 +463,7 @@ describe("hover", () => {
         tooltipDisposals.push(dispose);
         return new Disposable(dispose);
       });
-      statusSubscription = mainModule.consumeStatusBar(statusBar);
+      statusSubscription = mainModule.consumeStatusBar(windowService(statusBar));
       disposables.add(statusSubscription);
     });
 
@@ -545,7 +546,7 @@ describe("hover", () => {
       expect(disconnectedTile.destroy).toHaveBeenCalledTimes(1);
       expect(disconnectedTooltip).toHaveBeenCalledTimes(1);
 
-      disposables.add(mainModule.consumeStatusBar(statusBar));
+      disposables.add(mainModule.consumeStatusBar(windowService(statusBar)));
       const deactivatedTile = tiles[tiles.length - 1];
       const deactivatedTooltip = tooltipDisposals[tooltipDisposals.length - 1];
       await lumine.packages.deactivatePackage("hover");
@@ -553,7 +554,7 @@ describe("hover", () => {
       expect(deactivatedTooltip).toHaveBeenCalledTimes(1);
 
       mainModule = (await lumine.packages.activatePackage(packageRoot)).mainModule;
-      disposables.add(mainModule.consumeStatusBar(statusBar));
+      disposables.add(mainModule.consumeStatusBar(windowService(statusBar)));
       const activeTile = tiles[tiles.length - 1];
       expect(activeTile.item.classList.contains("active")).toBe(true);
       activeTile.item.click();
