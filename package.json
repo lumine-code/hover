@@ -76,13 +76,13 @@
   "configSchema": {
     "trace": {
       "title": "Trace",
-      "description": "Follow the mouse pointer to show hover tooltips. The trace command and status bar icon toggle this mode for the current window without saving the setting.",
+      "description": "Follow the mouse pointer to show hover tooltips. The trace command and status bar icons toggle one shared mode for this workspace without changing the saved default.",
       "type": "boolean",
       "default": true
     },
     "statusBar": {
       "title": "Status Bar Icon",
-      "description": "Show an icon on the right of the status bar to toggle mouse tracing in the current window.",
+      "description": "Show an icon on the right of the status bar to toggle mouse tracing for every window in this workspace.",
       "type": "boolean",
       "default": false
     },

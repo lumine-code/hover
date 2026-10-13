@@ -203,7 +203,7 @@ describe("hover", () => {
   }
 
   describe("trace mode", () => {
-    it("takes its initial state from config and resets a local override on activation", async () => {
+    it("takes its initial state from config and resets the workspace override on activation", async () => {
       lumine.config.set("hover.trace", false);
       await lumine.packages.deactivatePackage("hover");
       mainModule = (await lumine.packages.activatePackage(packageRoot)).mainModule;
@@ -496,7 +496,7 @@ describe("hover", () => {
       expect(item.getAttribute("aria-label")).toMatch(/enabled/i);
     });
 
-    it("toggles without notifications and recreates the icon with the current local state", () => {
+    it("toggles without notifications and recreates the icon with the current workspace state", () => {
       spyOn(lumine.notifications, "addInfo");
       lumine.config.set("hover.statusBar", true);
       lumine.commands.dispatch(editorView, "hover:toggle-trace");

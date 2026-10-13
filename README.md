@@ -4,7 +4,7 @@ Show documentation tooltips and signature help at the cursor.
 
 Fork of [savetheclocktower/pulsar-hover](https://github.com/savetheclocktower/pulsar-hover).
 
-Hover information comes from the shared context-help registry provided by `documentation-view`; signature help comes from provider packages. Both are shown as overlay decorations in pane editors and registered embedded editors such as notebook cells. The tooltip's Open in Documentation View button keeps the current result in a dock for continued reading. Each editor window owns its overlays, mouse tracing and status control while sharing the provider registries.
+Hover information comes from the shared context-help registry provided by `documentation-view`; signature help comes from provider packages. Both are shown as overlay decorations in pane editors and registered embedded editors such as notebook cells. The tooltip's Open in Documentation View button keeps the current result in a dock for continued reading. Each editor window owns its overlays and status control while sharing the provider registries and mouse tracing mode across the workspace.
 
 ## Features
 
@@ -26,7 +26,7 @@ To install `hover` search for it in the Install pane of the Lumine settings, or 
 
 Commands available in `lumine-workspace`:
 
-- `hover:toggle-trace`: turn mouse tracing on or off in this window.
+- `hover:toggle-trace`: turn mouse tracing on or off in every window of this workspace.
 
 Commands available in `lumine-text-editor`:
 
@@ -36,9 +36,9 @@ Commands available in `lumine-text-editor`:
 
 ## Usage
 
-Trace follows the mouse pointer and requests documentation when it rests over a symbol. The `hover.trace` setting enables it by default and supplies the initial mode for each window. Use `hover:toggle-trace` to switch the mode in the current window until it reloads; this does not change the saved setting. A later change to `hover.trace` replaces the window's current mode. Switching trace off immediately closes the current hover and cancels pending hover work; switching it on immediately checks the current pointer position without waiting for mouse movement. This applies to the command, icon, and setting changes. Switching trace off leaves signature help open. Cursor-triggered hover and explicit commands remain available independently.
+Trace follows the mouse pointer and requests documentation when it rests over a symbol. The `hover.trace` setting enables it by default and supplies the initial mode for the workspace. Use `hover:toggle-trace` or any status icon to switch one shared mode for every current and future window until the workspace reloads; this does not change the saved setting. A later change to `hover.trace` replaces the workspace's current mode. Switching trace off immediately closes hover overlays and cancels pending hover work in every window; switching it on immediately checks each window's current pointer position without waiting for mouse movement. This applies to the command, icon, and setting changes. Switching trace off leaves signature help open. Cursor-triggered hover and explicit commands remain available independently.
 
-Enable `hover.statusBar` to show a light bulb icon on the right side of the status bar; it is hidden by default. The icon indicates the current trace mode and switches it when clicked. Right-click opens a menu with the same Mouse Hover Tooltips switch for that window.
+Enable `hover.statusBar` to show a light bulb icon on the right side of the status bar; it is hidden by default. The icon indicates the current trace mode and switches it when clicked. Right-click opens a menu with the same Mouse Hover Tooltips switch for the workspace.
 
 Both overlays prefer the space above the source line when opening and fall back when window edges or other overlays leave too little room. The chosen side stays fixed while the overlay is open; reopening evaluates the available space again. A wheel gesture closes the panel unless the pointer is over a panel with scrollable content. Scrollable content keeps wheel events inside its panel, including at the beginning and end. A panel without scrollable content lets the wheel reach the editor as it closes. Wheel gestures reaching the source editor also cancel pending hover requests, even when the editor cannot scroll further.
 

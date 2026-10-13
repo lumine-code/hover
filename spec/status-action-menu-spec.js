@@ -11,7 +11,7 @@ describe("hover status action menu", () => {
     await lumine.packages.deactivatePackage("hover");
     await lumine.workspace.discardEditorWindows();
   });
-  it("shows the correct window state and keeps click and keyboard on the same command", async () => {
+  it("shows the shared workspace state and keeps click and keyboard on the same command", async () => {
     const extra = await lumine.workspace.openEditorWindow({ show: false });
     const domWindow = extra.getDOMWindow();
     const local = main.overlayManager;
@@ -28,7 +28,7 @@ describe("hover status action menu", () => {
     element.click();
     expect(remote.trace).toBe(false);
     expect(menu()[0].checked).toBe(false);
-    expect(local.trace).toBe(true);
+    expect(local.trace).toBe(false);
     element.dispatchEvent(new domWindow.KeyboardEvent("keydown", { key: "Enter" }));
     expect(menu()[0].checked).toBe(true);
     lumine.commands.dispatch(element, menu()[0].command);
