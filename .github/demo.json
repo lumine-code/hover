@@ -1,0 +1,16 @@
+{
+  "title": "hover",
+  "description": "Read an actual TypeScript diagnostic in an editor hover.",
+  "recordedOn": "2026-10-13",
+  "sourceRevision": "9643c6328d2453ec8d85ed2835b201ac09b953e1",
+  "mode": "normal",
+  "fontSettings": "default",
+  "images": [
+    {
+      "file": "demo.png",
+      "label": "Read an actual TypeScript diagnostic in an editor hover.",
+      "width": 1100,
+      "height": 490
+    }
+  ]
+}

@@ -18,6 +18,8 @@ Hover information comes from the shared context-help registry provided by `docum
 - **Configurable triggers**: trace the mouse pointer, hover on cursor rest, or request help on command, with adjustable show and hide delays.
 - **Dismissal**: overlays close on escape, on edits, and once the pointer or the cursor has left the symbol, whether or not it comes to rest.
 
+![Read an actual TypeScript diagnostic in an editor hover.](.github/demo.png)
+
 ## Installation
 
 To install `hover` search for it in the Install pane of the Lumine settings, or run the command `lumine --install lumine-code/hover`.
