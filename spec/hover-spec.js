@@ -480,15 +480,15 @@ describe("hover", () => {
       expect(item.getAttribute("aria-label")).toMatch(/enabled/i);
       expect(lumine.tooltips.add.calls.mostRecent().args[0]).toBe(item);
       const tooltip = lumine.tooltips.add.calls.mostRecent().args[1];
-      expect(tooltip.title()).toMatch(/enabled/i);
-      expect(tooltip.keyBindingCommand).toBe("hover:toggle-trace");
+      expect(tooltip.title()).toBe("Mouse hover tooltips on. Click to toggle.");
+      expect(tooltip.keyBindingCommand).toBeUndefined();
 
       item.click();
       expect(mainModule.overlayManager.trace).toBe(false);
       expect(lumine.config.get("hover.trace")).toBe(true);
       expect(item.classList.contains("active")).toBe(false);
       expect(item.getAttribute("aria-label")).toMatch(/disabled/i);
-      expect(tooltip.title()).toMatch(/disabled/i);
+      expect(tooltip.title()).toBe("Mouse hover tooltips off. Click to toggle.");
 
       lumine.config.set("hover.trace", false);
       lumine.config.set("hover.trace", true);

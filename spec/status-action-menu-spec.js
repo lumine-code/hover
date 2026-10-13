@@ -19,6 +19,10 @@ describe("hover status action menu", () => {
     const element = remote.traceStatusElement;
     const menu = () => lumine.contextMenu.templateForElement(element);
     expect(menu().map((item) => item.command)).toEqual(["hover:toggle-trace"]);
+    expect(menu()[0].mouseBindingLabel).toBe("LMB");
+    const [tooltip] = lumine.tooltips.findTooltips(element);
+    expect(tooltip.options.keyBindingCommand).toBeUndefined();
+    expect(tooltip.getTitle()).toContain("Click to toggle.");
     element.dispatchEvent(new domWindow.MouseEvent("click", { button: 2 }));
     expect(remote.trace).toBe(true);
     element.click();
