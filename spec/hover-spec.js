@@ -481,7 +481,8 @@ describe("hover", () => {
       expect(lumine.tooltips.add.calls.mostRecent().args[0]).toBe(item);
       const tooltip = lumine.tooltips.add.calls.mostRecent().args[1];
       expect(tooltip.title()).toBe("Mouse hover tooltips on. Click to toggle.");
-      expect(tooltip.keyBindingCommand).toBeUndefined();
+      expect(tooltip.keyBindingCommand).toBe("hover:toggle-trace");
+      expect(tooltip.keyBindingExtra).toBeUndefined();
 
       item.click();
       expect(mainModule.overlayManager.trace).toBe(false);
