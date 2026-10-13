@@ -8,7 +8,9 @@
           "submenu": [
             {
               "label": "Mouse Hover",
-              "command": "hover:toggle-trace"
+              "command": "hover:toggle-trace",
+              "group": "intelligence",
+              "order": 40
             }
           ]
         }
