@@ -1,0 +1,32 @@
+{
+  "menu": [
+    {
+      "label": "View",
+      "submenu": [
+        {
+          "label": "Editor",
+          "submenu": [
+            {
+              "label": "Mouse Hover",
+              "command": "hover:toggle-trace"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Packages",
+      "submenu": [
+        {
+          "label": "Hover",
+          "submenu": [
+            {
+              "label": "Toggle Mouse Hover",
+              "command": "hover:toggle-trace"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
