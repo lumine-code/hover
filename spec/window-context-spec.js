@@ -101,4 +101,26 @@ describe("shared hover tracing and window-local presentations", () => {
     expect(main.overlayManager.trace).toBeTrue();
     expect(main.getManager(extra).trace).toBeTrue();
   });
+
+  it("cancels unrevealed hover frames before its source pane is attached", async () => {
+    const editor = await lumine.workspace.open();
+    editor.setText("hover");
+    const extra = await lumine.workspace.detachItem(editor);
+    const manager = main.getManager(extra);
+    const frames = [];
+    spyOn(extra.getDOMWindow(), "requestAnimationFrame").and.callFake((callback) =>
+      frames.push(callback),
+    );
+    const cancel = spyOn(extra.getDOMWindow(), "cancelAnimationFrame");
+    const element = extra.getDocument().createElement("div");
+    element.textContent = "Pending hover";
+    manager.mountOverlay(editor, null, [0, 0], element, { type: "hover", highlight: false });
+    expect(frames.length).toBeGreaterThan(0);
+    await lumine.workspace.attachWindow(extra);
+    expect(cancel).toHaveBeenCalled();
+    expect(manager.overlayElement).toBeNull();
+    const count = frames.length;
+    for (const callback of frames.slice()) callback();
+    expect(frames.length).toBe(count);
+  });
 });
