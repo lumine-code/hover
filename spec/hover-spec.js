@@ -411,7 +411,7 @@ describe("hover", () => {
       expect(lumine.notifications.addInfo).not.toHaveBeenCalled();
     });
 
-    it("dispatches Ctrl-H from an editor and a panel through the workspace keymap", () => {
+    it("dispatches the trace chord from an editor and a panel through the workspace keymap", () => {
       const panelItem = document.createElement("div");
       const control = document.createElement("button");
       panelItem.appendChild(control);
@@ -422,16 +422,24 @@ describe("hover", () => {
         [editorView, false],
         [control, true],
       ]) {
-        const bindings = lumine.keymaps.findKeyBindings({ keystrokes: "ctrl-h", target });
+        const primary = process.platform === "darwin" ? "cmd" : "ctrl";
+        const bindings = lumine.keymaps.findKeyBindings({
+          keystrokes: `${primary}-k shift-h`,
+          target,
+        });
         expect(
           bindings.some(
             ({ command, selector }) =>
               command === "hover:toggle-trace" && selector === "lumine-workspace",
           ),
         ).toBe(true);
-        lumine.keymaps.handleKeyboardEvent(
-          lumine.keymaps.constructor.buildKeydownEvent("h", { ctrl: true, target }),
-        );
+        for (const [key, modifiers] of [
+          ["k", { [primary]: true }],
+          ["h", { shift: true }],
+        ])
+          lumine.keymaps.handleKeyboardEvent(
+            lumine.keymaps.constructor.buildKeydownEvent(key, { ...modifiers, target }),
+          );
         expect(mainModule.overlayManager.trace).toBe(trace);
         expect(lumine.config.get("hover.trace")).toBe(true);
       }

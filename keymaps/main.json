@@ -1,10 +1,12 @@
 {
   "lumine-workspace": {
-    "ctrl-h": "hover:toggle-trace"
+    "cmdorctrl-k shift-h": "hover:toggle-trace"
   },
+  // Hover and signature help also describe text in mini editors. These chords
+  // leave Cocoa's Control-H and Option-H editing commands available on macOS.
   "lumine-text-editor": {
-    "alt-h": "hover:toggle",
-    "cmdorctrl-alt-j": "hover:toggle-signature-help"
+    "cmdorctrl-k h": "hover:toggle",
+    "cmdorctrl-k j": "hover:toggle-signature-help"
   },
   "lumine-text-editor.hover-active": {
     "escape": "hover:dismiss"
