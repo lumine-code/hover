@@ -41,6 +41,11 @@ const SIGNATURE_HELP = {
 };
 
 describe("hover", () => {
+  // Analysis fixtures use a real grammar; None deliberately disables this package.
+  beforeEach(async () => {
+    await lumine.packages.activatePackage("language-text");
+  });
+
   let mainModule;
   let contextHelpModule;
   let editor;
@@ -115,6 +120,22 @@ describe("hover", () => {
     disposables.add(mainModule.consumeHoverSignature(provider));
     return provider;
   }
+
+  it("clears signatures for None and stops both signature and hover provider requests", async () => {
+    const signature = addSignatureProvider();
+    const help = jasmine.createSpy("hover").and.returnValue(null);
+    addHoverProvider(help);
+    const manager = mainModule.overlayManager;
+    await manager.showSignatureHelp(signature, editor, [0, 0], {});
+    expect(overlayDecorations(editor).length).toBe(1);
+    editor.setGrammar(lumine.grammars.nullGrammar);
+    expect(overlayDecorations(editor).length).toBe(0);
+    signature.getSignature.calls.reset();
+    await manager.showSignatureHelp(signature, editor, [0, 0], {});
+    await manager.showHoverOverlay(editor, [0, 0]);
+    expect(signature.getSignature).not.toHaveBeenCalled();
+    expect(help).not.toHaveBeenCalled();
+  });
 
   function addRegisteredEditor(role = "fragment", text = "add\n") {
     const targetEditor = lumine.workspace.buildTextEditor({ mini: false });

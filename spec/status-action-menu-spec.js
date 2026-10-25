@@ -1,4 +1,9 @@
 describe("hover status action menu", () => {
+  // Analysis fixtures use a real grammar; None deliberately disables this package.
+  beforeEach(async () => {
+    await lumine.packages.activatePackage("language-text");
+  });
+
   let main;
   beforeEach(async () => {
     jasmine.useRealClock();

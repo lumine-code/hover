@@ -1,4 +1,9 @@
 describe("shared hover tracing and window-local presentations", () => {
+  // Analysis fixtures use a real grammar; None deliberately disables this package.
+  beforeEach(async () => {
+    await lumine.packages.activatePackage("language-text");
+  });
+
   let main, providerLease;
   const result = {
     signatures: [{ label: "call(value)", parameters: [{ label: "value" }] }],
