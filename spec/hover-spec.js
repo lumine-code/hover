@@ -1,6 +1,6 @@
 const windowService = require("./helpers/window-service");
 const path = require("path");
-const { CompositeDisposable, Disposable, Point } = require("lumine");
+const { CompositeDisposable, Disposable, Point, Range } = require("lumine");
 
 const packageRoot = path.join(__dirname, "..");
 
@@ -135,6 +135,39 @@ describe("hover", () => {
     await manager.showHoverOverlay(editor, [0, 0]);
     expect(signature.getSignature).not.toHaveBeenCalled();
     expect(help).not.toHaveBeenCalled();
+  });
+
+  it("reads only the signature trigger character from a source-backed bulk change", async () => {
+    const provider = addSignatureProvider();
+    const manager = mainModule.overlayManager;
+    const show = spyOn(manager, "showSignatureHelp").and.resolveTo();
+    editor.setCursorBufferPosition([0, 1]);
+    const read = jasmine.createSpy("source slice").and.returnValue("(");
+    await manager.checkSignatureTrigger(
+      {
+        changes: [
+          {
+            oldRange: new Range([0, 0], [0, 0]),
+            newRange: new Range([0, 0], [0, 512 * 1024 * 1024]),
+            oldTextSource: { length: 0 },
+            newTextSource: { length: 512 * 1024 * 1024, slice: read },
+            get oldText() {
+              throw new Error("full removed text");
+            },
+            get newText() {
+              throw new Error("full inserted text");
+            },
+          },
+        ],
+      },
+      editor,
+    );
+    expect(read).toHaveBeenCalledOnceWith(0, 1);
+    expect(show).toHaveBeenCalledWith(provider, editor, new Point(0, 1), {
+      triggerKind: 2,
+      triggerCharacter: "(",
+      isRetrigger: false,
+    });
   });
 
   function addRegisteredEditor(role = "fragment", text = "add\n") {
