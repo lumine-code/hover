@@ -1690,7 +1690,7 @@ describe("hover", () => {
       const embedded = item.querySelector("lumine-text-editor");
       const model = embedded.getModel();
       expect(model.isSoftWrapped()).toBe(true);
-      expect(model.displayLayer.softWrapColumn).toBe(model.maxScreenLineLength);
+      expect(model.displayLayer.softWrapColumn).toBe(model.unwrappedLineLengthLimit);
       expect(model.getScreenLineCount()).toBe(1);
       expect(model.lineTextForScreenRow(0)).toBe(code);
       embedded.getComponent().updateSync();
